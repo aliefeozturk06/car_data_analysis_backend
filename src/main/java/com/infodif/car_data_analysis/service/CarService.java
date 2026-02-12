@@ -30,8 +30,8 @@ public class CarService {
 
     public CarListResponseDTO getAllCars(CarFilterDTO filter) {
         List<Sort.Order> orders = new ArrayList<>();
-        if (filter.getSort() != null && !filter.getSort().isEmpty()) {
-            String[] sortParts = filter.getSort().split(",");
+        if (filter.sort() != null && !filter.sort().isEmpty()) {
+            String[] sortParts = filter.sort().split(",");
             for (int i = 0; i < sortParts.length; i += 2) {
                 String property = sortParts[i];
                 String direction = (i + 1 < sortParts.length) ? sortParts[i+1] : "asc";
@@ -48,7 +48,7 @@ public class CarService {
         }
 
         Sort sort = Sort.by(orders);
-        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+        Pageable pageable = PageRequest.of(filter.page(), filter.size(), sort);
 
         Specification<Car> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -59,22 +59,22 @@ public class CarService {
                     cb.equal(root.get("status"), "ON_SALE")
             ));
 
-            if (filter.getManufacturer() != null && !filter.getManufacturer().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.get("manufacturer")), filter.getManufacturer().toLowerCase()));
+            if (filter.manufacturer() != null && !filter.manufacturer().isEmpty()) {
+                predicates.add(cb.equal(cb.lower(root.get("manufacturer")), filter.manufacturer().toLowerCase()));
             }
 
-            if (filter.getModel() != null && !filter.getModel().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.getModel().toLowerCase() + "%"));
+            if (filter.model() != null && !filter.model().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.model().toLowerCase() + "%"));
             }
 
-            if (filter.getColor() != null && !filter.getColor().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.get("color")), filter.getColor().toLowerCase()));
+            if (filter.color() != null && !filter.color().isEmpty()) {
+                predicates.add(cb.equal(cb.lower(root.get("color")), filter.color().toLowerCase()));
             }
 
-            if (filter.getMinYear() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.getMinYear()));
-            if (filter.getMaxYear() != null) predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.getMaxYear()));
-            if (filter.getMinPrice() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.getMinPrice()));
-            if (filter.getMaxPrice() != null) predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
+            if (filter.minYear() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.minYear()));
+            if (filter.maxYear() != null) predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.maxYear()));
+            if (filter.minPrice() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));
+            if (filter.maxPrice() != null) predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.maxPrice()));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -109,12 +109,12 @@ public class CarService {
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
         Car car = Car.builder()
-                .manufacturer(dto.getManufacturer())
-                .model(dto.getModel())
-                .year(dto.getYear())
-                .price(dto.getPrice())
-                .color(dto.getColor())
-                .mileage(dto.getMileage())
+                .manufacturer(dto.manufacturer())
+                .model(dto.model())
+                .year(dto.year())
+                .price(dto.price())
+                .color(dto.color())
+                .mileage(dto.mileage())
                 .owner(owner)
                 .status("OWNED")
                 .build();
@@ -143,9 +143,9 @@ public class CarService {
             throw new RuntimeException("Only owned cars can be updated!");
         }
 
-        if (updateDto.getColor() != null) car.setColor(updateDto.getColor());
-        if (updateDto.getMileage() != null) car.setMileage(updateDto.getMileage());
-        if (updateDto.getPrice() != null) car.setPrice(updateDto.getPrice());
+        if (updateDto.color() != null) car.setColor(updateDto.color());
+        if (updateDto.mileage() != null) car.setMileage(updateDto.mileage());
+        if (updateDto.price() != null) car.setPrice(updateDto.price());
 
         return toResponseDTO(carRepository.save(car));
     }
@@ -175,11 +175,11 @@ public class CarService {
 
     // 🟢 GERİ GETİRİLEN YARDIMCI METOD
     private void updateEntityFromDto(Car car, CarRequestDTO dto) {
-        car.setManufacturer(dto.getManufacturer());
-        car.setModel(dto.getModel());
-        car.setYear(dto.getYear());
-        car.setColor(dto.getColor());
-        car.setPrice(dto.getPrice());
-        car.setMileage(dto.getMileage());
+        car.setManufacturer(dto.manufacturer());
+        car.setModel(dto.model());
+        car.setYear(dto.year());
+        car.setColor(dto.color());
+        car.setPrice(dto.price());
+        car.setMileage(dto.mileage());
     }
 }

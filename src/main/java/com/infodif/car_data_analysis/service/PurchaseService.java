@@ -87,40 +87,40 @@ public class PurchaseService {
 
     @Transactional
     public String createUpdateRequest(UpdateCarRequestDTO dto) {
-        if (dto.getNewPrice() == null && dto.getNewColor() == null && dto.getNewMileage() == null) {
+        if (dto.newPrice() == null && dto.newColor() == null && dto.newMileage() == null) {
             throw new RuntimeException("Fiyat, Renk veya Kilometre alanlarından en az biri doldurulmalıdır!");
         }
 
-        User user = userRepository.findByUsername(dto.getUsername())
+        User user = userRepository.findByUsername(dto.username())
                 .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı!"));
 
-        Car car = carRepository.findById(dto.getCarId())
+        Car car = carRepository.findById(dto.carId())
                 .orElseThrow(() -> new RuntimeException("Araç bulunamadı!"));
 
         if (user.getRole() == Role.ROLE_MODERATOR) {
-            if (car.getOwner() != null && car.getOwner().getUsername().equals(dto.getUsername())) {
-                if (dto.getNewPrice() != null) car.setPrice(dto.getNewPrice());
-                if (dto.getNewColor() != null) car.setColor(dto.getNewColor());
-                if (dto.getNewMileage() != null) car.setMileage(dto.getNewMileage());
+            if (car.getOwner() != null && car.getOwner().getUsername().equals(dto.username())) {
+                if (dto.newPrice() != null) car.setPrice(dto.newPrice());
+                if (dto.newColor() != null) car.setColor(dto.newColor());
+                if (dto.newMileage() != null) car.setMileage(dto.newMileage());
                 carRepository.save(car);
                 return "Sayın Moderatör, aracınız anında güncellendi!";
             }
         }
 
-        boolean alreadyPending = approvalRepository.findByUsernameAndStatus(dto.getUsername(), ApprovalStatus.PENDING)
-                .stream().anyMatch(req -> req.getCarId().equals(dto.getCarId()));
+        boolean alreadyPending = approvalRepository.findByUsernameAndStatus(dto.username(), ApprovalStatus.PENDING)
+                .stream().anyMatch(req -> req.getCarId().equals(dto.carId()));
 
         if (alreadyPending) {
             throw new RuntimeException("Bu araç için zaten onay bekleyen bir güncelleme isteğiniz var!");
         }
 
         CarUpdateApproval approval = CarUpdateApproval.builder()
-                .carId(dto.getCarId())
-                .username(dto.getUsername())
+                .carId(dto.carId())
+                .username(dto.username())
                 .requestedBy(user) // 👈 DÜZELTME BURADA: User entity'si veritabanı ilişkisi için eklendi
-                .newPrice(dto.getNewPrice()) // Frontend'den newPrice olarak gelmeli
-                .newColor(dto.getNewColor())
-                .newMileage(dto.getNewMileage())
+                .newPrice(dto.newPrice()) // Frontend'den newPrice olarak gelmeli
+                .newColor(dto.newColor())
+                .newMileage(dto.newMileage())
                 .status(ApprovalStatus.PENDING)
                 .requestDate(LocalDateTime.now())
                 .build();
@@ -153,26 +153,26 @@ public class PurchaseService {
             }
 
             if (filter != null) {
-                if (filter.getManufacturer() != null && !filter.getManufacturer().isEmpty()) {
-                    predicates.add(cb.like(cb.lower(root.get("manufacturer")), "%" + filter.getManufacturer().toLowerCase() + "%"));
+                if (filter.manufacturer() != null && !filter.manufacturer().isEmpty()) {
+                    predicates.add(cb.like(cb.lower(root.get("manufacturer")), "%" + filter.manufacturer().toLowerCase() + "%"));
                 }
-                if (filter.getModel() != null && !filter.getModel().isEmpty()) {
-                    predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.getModel().toLowerCase() + "%"));
+                if (filter.model() != null && !filter.model().isEmpty()) {
+                    predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.model().toLowerCase() + "%"));
                 }
-                if (filter.getColor() != null && !filter.getColor().isEmpty()) {
-                    predicates.add(cb.like(cb.lower(root.get("color")), "%" + filter.getColor().toLowerCase() + "%"));
+                if (filter.color() != null && !filter.color().isEmpty()) {
+                    predicates.add(cb.like(cb.lower(root.get("color")), "%" + filter.color().toLowerCase() + "%"));
                 }
-                if (filter.getMinYear() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.getMinYear()));
+                if (filter.minYear() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.minYear()));
                 }
-                if (filter.getMaxYear() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.getMaxYear()));
+                if (filter.maxYear() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.maxYear()));
                 }
-                if (filter.getMinPrice() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.getMinPrice()));
+                if (filter.minPrice() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));
                 }
-                if (filter.getMaxPrice() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
+                if (filter.maxPrice() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.maxPrice()));
                 }
             }
             return cb.and(predicates.toArray(new Predicate[0]));

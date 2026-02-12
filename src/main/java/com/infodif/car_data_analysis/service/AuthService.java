@@ -29,14 +29,14 @@ public class AuthService {
 
     public AuthResponseDTO login(AuthRequestDTO request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.username());
 
         String token = jwtUtil.generateToken(userDetails);
 
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new RuntimeException("User not found!"));
 
         return new AuthResponseDTO(
@@ -49,13 +49,13 @@ public class AuthService {
 
     @Transactional
     public String register(AuthRequestDTO request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByUsername(request.username())) {
             throw new RuntimeException("This username already taken!");
         }
 
         User user = User.builder()
-                .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
                 .role(Role.ROLE_USER)
                 .balance(BigDecimal.valueOf(100000))
                 .build();

@@ -3,7 +3,7 @@ package com.infodif.car_data_analysis.controller;
 import com.infodif.car_data_analysis.dto.UserDTO;
 import com.infodif.car_data_analysis.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -12,22 +12,26 @@ import java.math.BigDecimal;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping("/{username}")
-    public ResponseEntity<UserDTO> getUserProfile(@PathVariable String username) {
-        return ResponseEntity.ok(userService.getUserDtoByUsername(username));
+    public UserDTO getUserProfile(@PathVariable String username) {
+        log.info("Fetching profile data for user: {}", username);
+        return userService.getUserDtoByUsername(username);
     }
 
     @GetMapping("/{username}/balance")
     public BigDecimal getBalance(@PathVariable String username) {
+        log.info("Checking balance for user: {}", username);
         return userService.getBalance(username);
     }
 
     @PutMapping("/add-balance")
     public BigDecimal addBalance(@RequestParam String username, @RequestParam BigDecimal amount) {
+        log.info("Adding balance: {} to user: {}", amount, username);
         return userService.addBalance(username, amount);
     }
 }

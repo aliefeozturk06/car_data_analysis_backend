@@ -1,22 +1,17 @@
 package com.infodif.car_data_analysis.dto;
 
 import jakarta.validation.constraints.Min;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class CarUpdateDTO {
+public record CarUpdateDTO(
 
-    private String color;
+        String color,
 
-    @Min(value = 0, message = "Mileage cannot be negative")
-    private Integer mileage;
+        @Min(value = 0, message = "Mileage cannot be negative")
+        Integer mileage,
 
-    @Min(value = 0, message = "Price cannot be negative")
-    private Double price;
-}
+        @Min(value = 0, message = "Price cannot be negative")
+        Double price
+
+) {}

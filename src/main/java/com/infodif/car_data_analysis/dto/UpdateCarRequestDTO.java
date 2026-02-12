@@ -1,29 +1,25 @@
 package com.infodif.car_data_analysis.dto;
 
-import lombok.*;
+import lombok.Builder;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class UpdateCarRequestDTO {
+public record UpdateCarRequestDTO(
+        Long id,
+        Long carId,
+        String username,
 
-    private Long id;
-    private Long carId;
-    private String username;
+        Double newPrice,
+        String newColor,
+        Integer newMileage,
 
-    private Double newPrice;
-    private String newColor;
-    private Integer newMileage;
+        Double oldPrice,
+        String oldColor,
+        Integer oldMileage,
 
-    private Double oldPrice;
-    private String oldColor;
-    private Integer oldMileage;
+        String manufacturer,
+        String model,
 
-    private String manufacturer;
-    private String model;
-
-    private String status;
-    private LocalDateTime requestDate;
-}
+        String status,
+        LocalDateTime requestDate
+) {}
