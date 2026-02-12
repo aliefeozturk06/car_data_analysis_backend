@@ -1,16 +1,15 @@
 package com.infodif.car_data_analysis.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "car_update_approvals")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class CarUpdateApproval {
 
     @Id
@@ -18,11 +17,10 @@ public class CarUpdateApproval {
     private Long id;
 
     private Long carId;
-
     private String username;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "requested_by_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User requestedBy;
 
     private Double newPrice;
@@ -30,30 +28,19 @@ public class CarUpdateApproval {
     private Integer newMileage;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ApprovalStatus status;
 
     private LocalDateTime requestDate;
 
-    @Override
-    public String toString() {
-        return "CarUpdateApproval{" +
-                "id=" + id +
-                ", carId=" + carId +
-                ", status=" + status +
-                ", requestDate=" + requestDate +
-                '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof CarUpdateApproval that)) return false;
-        return id != null && id.equals(that.getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
+    public CarUpdateApproval(Long carId, String username, User requestedBy,
+                             Double newPrice, String newColor, Integer newMileage) {
+        this.carId = carId;
+        this.username = username;
+        this.requestedBy = requestedBy;
+        this.newPrice = newPrice;
+        this.newColor = newColor;
+        this.newMileage = newMileage;
+        this.status = ApprovalStatus.PENDING;
+        this.requestDate = LocalDateTime.now();
     }
 }

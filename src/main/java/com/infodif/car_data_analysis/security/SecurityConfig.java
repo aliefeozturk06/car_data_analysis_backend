@@ -88,11 +88,10 @@ public class SecurityConfig {
                 String password = (String) authentication.getCredentials();
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                // Şifre kontrolü
                 if (passwordEncoder().matches(password, userDetails.getPassword())) {
                     return new UsernamePasswordAuthenticationToken(userDetails, password, userDetails.getAuthorities());
                 } else {
-                    throw new BadCredentialsException("Kullanıcı adı veya şifre hatalı!");
+                    throw new BadCredentialsException("Username or password is wrong!");
                 }
             }
 

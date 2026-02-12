@@ -10,8 +10,4 @@ import java.util.List;
 
 @Repository
 public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
-
-    List<Car> findByOwnerUsernameAndStatus(String ownerUsername, String status);
-
-    List<Car> findByOwnerUsernameAndStatusIn(String ownerUsername, Collection<String> statuses);
 }

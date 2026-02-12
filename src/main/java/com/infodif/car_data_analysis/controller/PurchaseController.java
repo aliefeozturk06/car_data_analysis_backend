@@ -2,6 +2,7 @@ package com.infodif.car_data_analysis.controller;
 
 import com.infodif.car_data_analysis.dto.CarFilterDTO;
 import com.infodif.car_data_analysis.dto.CarResponseDTO;
+import com.infodif.car_data_analysis.dto.TransactionDTO;
 import com.infodif.car_data_analysis.dto.UpdateCarRequestDTO;
 import com.infodif.car_data_analysis.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +32,8 @@ public class PurchaseController {
     public String createUpdateRequest(@RequestBody UpdateCarRequestDTO request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = auth.getName();
-        request.username();
 
-        log.info("📢 Update request received from: {}", currentUsername);
-        log.info("📦 Data: {}", request);
+        log.info("📢 Update request received for car ID: {} from user: {}", request.carId(), currentUsername);
 
         return purchaseService.createUpdateRequest(request);
     }
@@ -55,7 +54,7 @@ public class PurchaseController {
     }
 
     @GetMapping("/sold-history")
-    public List<CarResponseDTO> getSoldHistory(@RequestParam String username) {
+    public List<TransactionDTO> getSoldHistory(@RequestParam String username) {
         log.info("Fetching sold history for user {}", username);
         return purchaseService.getSoldHistory(username);
     }

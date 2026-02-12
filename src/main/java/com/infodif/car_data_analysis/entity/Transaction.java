@@ -1,7 +1,9 @@
 package com.infodif.car_data_analysis.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
@@ -9,8 +11,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Transaction {
 
     @Id
@@ -38,30 +38,17 @@ public class Transaction {
     @Column(nullable = false)
     private LocalDateTime saleDate;
 
-    @PrePersist
-    protected void onCreate() {
+    public Transaction(Long carId, String sellerName, String buyerName, String manufacturer,
+                       String model, String color, Integer year, Integer mileage, Double price) {
+        this.carId = carId;
+        this.sellerName = sellerName;
+        this.buyerName = buyerName;
+        this.manufacturer = manufacturer;
+        this.model = model;
+        this.color = color;
+        this.year = year;
+        this.mileage = mileage;
+        this.price = price;
         this.saleDate = LocalDateTime.now();
-    }
-
-    @Override
-    public String toString() {
-        return "Transaction{" +
-                "id=" + id +
-                ", seller='" + sellerName + '\'' +
-                ", buyer='" + buyerName + '\'' +
-                ", price=" + price +
-                '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Transaction that)) return false;
-        return id != null && id.equals(that.getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
     }
 }

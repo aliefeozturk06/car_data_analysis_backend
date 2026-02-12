@@ -3,10 +3,12 @@ package com.infodif.car_data_analysis.service;
 import com.infodif.car_data_analysis.dto.*;
 import com.infodif.car_data_analysis.entity.Car;
 import com.infodif.car_data_analysis.entity.User;
+import com.infodif.car_data_analysis.mapper.CarMapper;
 import com.infodif.car_data_analysis.repository.CarRepository;
 import com.infodif.car_data_analysis.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -19,14 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CarService {
 
     private final CarRepository carRepository;
     private final UserRepository userRepository;
+    private final CarMapper carMapper;
 
     public CarListResponseDTO getAllCars(CarFilterDTO filter) {
         List<Sort.Order> orders = new ArrayList<>();
@@ -53,7 +56,6 @@ public class CarService {
         Specification<Car> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 🚨 ON_SALE FİLTRESİ BURADA KORUNDU
             predicates.add(cb.or(
                     cb.isNull(root.get("owner")),
                     cb.equal(root.get("status"), "ON_SALE")
@@ -82,24 +84,24 @@ public class CarService {
         Page<Car> carPage = carRepository.findAll(spec, pageable);
 
         List<CarResponseDTO> dtoList = carPage.getContent().stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+                .map(carMapper::toResponseDto)
+                .toList();
 
         String message = "Total " + carPage.getTotalElements() + " cars found.";
 
-        return CarListResponseDTO.builder()
-                .message(message)
-                .totalCount(carPage.getTotalElements())
-                .totalPages(carPage.getTotalPages())
-                .cars(dtoList)
-                .build();
+        return new CarListResponseDTO(
+                message,
+                carPage.getTotalElements(),
+                carPage.getTotalPages(),
+                dtoList
+        );
     }
 
     @Cacheable(value = "cars", key = "#id")
     public CarResponseDTO getCarById(Long id) {
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Car not found!"));
-        return toResponseDTO(car);
+        return carMapper.toResponseDto(car);
     }
 
     @Transactional
@@ -108,31 +110,24 @@ public class CarService {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        Car car = Car.builder()
-                .manufacturer(dto.manufacturer())
-                .model(dto.model())
-                .year(dto.year())
-                .price(dto.price())
-                .color(dto.color())
-                .mileage(dto.mileage())
-                .owner(owner)
-                .status("OWNED")
-                .build();
+        Car car = carMapper.toEntity(dto);
+        car.setOwner(owner);
+        car.setStatus("OWNED");
 
-        return toResponseDTO(carRepository.save(car));
+        return carMapper.toResponseDto(carRepository.save(car));
     }
 
-    // 🟢 GERİ GETİRİLEN METOD: updateCar
     @Transactional
     @CacheEvict(value = "cars", key = "#id")
     public CarResponseDTO updateCar(Long id, CarRequestDTO dto) {
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Car for update not found!"));
-        updateEntityFromDto(car, dto);
-        return toResponseDTO(carRepository.save(car));
+
+        carMapper.updateEntityFromDto(dto, car);
+
+        return carMapper.toResponseDto(carRepository.save(car));
     }
 
-    // 🟢 GERİ GETİRİLEN METOD: patchCar
     @Transactional
     @CacheEvict(value = "cars", key = "#id")
     public CarResponseDTO patchCar(Long id, CarUpdateDTO updateDto) {
@@ -143,11 +138,9 @@ public class CarService {
             throw new RuntimeException("Only owned cars can be updated!");
         }
 
-        if (updateDto.color() != null) car.setColor(updateDto.color());
-        if (updateDto.mileage() != null) car.setMileage(updateDto.mileage());
-        if (updateDto.price() != null) car.setPrice(updateDto.price());
+        carMapper.patchEntityFromDto(updateDto, car);
 
-        return toResponseDTO(carRepository.save(car));
+        return carMapper.toResponseDto(carRepository.save(car));
     }
 
     @Transactional
@@ -157,29 +150,5 @@ public class CarService {
             throw new RuntimeException("Car with this ID does not exist!");
         }
         carRepository.deleteById(id);
-    }
-
-    private CarResponseDTO toResponseDTO(Car entity) {
-        return CarResponseDTO.builder()
-                .id(entity.getId())
-                .manufacturer(entity.getManufacturer())
-                .model(entity.getModel())
-                .year(entity.getYear())
-                .color(entity.getColor())
-                .price(entity.getPrice())
-                .mileage(entity.getMileage())
-                .status(entity.getStatus())
-                .isUsed(entity.getMileage() > 0)
-                .build();
-    }
-
-    // 🟢 GERİ GETİRİLEN YARDIMCI METOD
-    private void updateEntityFromDto(Car car, CarRequestDTO dto) {
-        car.setManufacturer(dto.manufacturer());
-        car.setModel(dto.model());
-        car.setYear(dto.year());
-        car.setColor(dto.color());
-        car.setPrice(dto.price());
-        car.setMileage(dto.mileage());
     }
 }

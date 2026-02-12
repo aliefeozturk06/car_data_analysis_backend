@@ -2,38 +2,46 @@ package com.infodif.car_data_analysis.service;
 
 import com.infodif.car_data_analysis.dto.UpdateCarRequestDTO;
 import com.infodif.car_data_analysis.entity.*;
+import com.infodif.car_data_analysis.mapper.CarUpdateApprovalMapper;
 import com.infodif.car_data_analysis.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CarUpdateApprovalService {
 
     private final CarUpdateApprovalRepository approvalRepository;
     private final CarRepository carRepository;
+    private final CarUpdateApprovalMapper approvalMapper;
 
     public List<UpdateCarRequestDTO> getAllPendingRequests() {
-        // 🛡️ 1. Adımdaki repository metodunu kullanıyoruz
+        log.info("Fetching all pending car update requests for moderator.");
+
         return approvalRepository.findByStatus(ApprovalStatus.PENDING)
                 .stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .map(approval -> {
+                    Car car = carRepository.findById(approval.getCarId()).orElse(null);
+                    return approvalMapper.toDto(approval, car);
+                })
+                .toList();
     }
 
     @Transactional
     public void approveUpdate(Long approvalId) {
+        log.info("Approving update request ID: {}", approvalId);
+
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                .orElseThrow(() -> new RuntimeException("Talep bulunamadı!"));
+                .orElseThrow(() -> new RuntimeException("Request cannot found!"));
 
         Car car = carRepository.findById(approval.getCarId())
-                .orElseThrow(() -> new RuntimeException("Araç bulunamadı!"));
+                .orElseThrow(() -> new RuntimeException("Car cannot found!"));
 
-        // Güncellemeleri yansıt
         if (approval.getNewPrice() != null) car.setPrice(approval.getNewPrice());
         if (approval.getNewColor() != null) car.setColor(approval.getNewColor());
         if (approval.getNewMileage() != null) car.setMileage(approval.getNewMileage());
@@ -46,26 +54,13 @@ public class CarUpdateApprovalService {
 
     @Transactional
     public void rejectUpdate(Long approvalId) {
+        log.info("Rejecting update request ID: {}", approvalId);
+
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                .orElseThrow(() -> new RuntimeException("Talep bulunamadı!"));
+                .orElseThrow(() -> new RuntimeException("Request cannot found!"));
 
         approval.setStatus(ApprovalStatus.REJECTED);
         approvalRepository.save(approval);
     }
 
-    private UpdateCarRequestDTO convertToDTO(CarUpdateApproval entity) {
-        Car car = carRepository.findById(entity.getCarId()).orElse(null);
-        return UpdateCarRequestDTO.builder()
-                .id(entity.getId())
-                .carId(entity.getCarId())
-                .username(entity.getUsername())
-                .newPrice(entity.getNewPrice())
-                .newColor(entity.getNewColor())
-                .newMileage(entity.getNewMileage())
-                .manufacturer(car != null ? car.getManufacturer() : "Bilinmiyor")
-                .model(car != null ? car.getModel() : "Bilinmiyor")
-                .status(entity.getStatus().name())
-                .requestDate(entity.getRequestDate())
-                .build();
-    }
 }

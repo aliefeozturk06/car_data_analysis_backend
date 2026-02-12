@@ -3,7 +3,6 @@ package com.infodif.car_data_analysis.security;
 import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

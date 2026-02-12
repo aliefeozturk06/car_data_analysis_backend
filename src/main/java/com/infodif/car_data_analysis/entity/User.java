@@ -1,7 +1,9 @@
 package com.infodif.car_data_analysis.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,8 +17,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class User implements UserDetails {
 
     @Id
@@ -32,7 +32,6 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @Builder.Default
     @Column(precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
@@ -85,6 +84,9 @@ public class User implements UserDetails {
         if (this == o) return true;
         if (!(o instanceof User user)) return false;
         return id != null && id.equals(user.getId());
+    }
+
+    public User(@NotBlank(message = "Username cannot be empty") String username, @Nullable String encode, Role role, BigDecimal bigDecimal) {
     }
 
     @Override
