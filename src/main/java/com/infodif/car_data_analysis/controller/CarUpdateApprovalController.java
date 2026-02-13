@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/approvals")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class CarUpdateApprovalController {
 
@@ -19,21 +18,21 @@ public class CarUpdateApprovalController {
 
     @GetMapping("/pending")
     public List<UpdateCarRequestDTO> getPendingUpdates() {
-        log.info("Fetching all pending update requests.");
+        log.info("🛡️ Moderator gets all the waiting update requests.");
         return approvalService.getAllPendingRequests();
     }
 
     @PostMapping("/approve/{id}")
     public String approveUpdate(@PathVariable Long id) {
+        log.info("✅ Approval request has been sent. Request ID: {}", id);
         approvalService.approveUpdate(id);
-        log.info("Update request with ID {} approved successfully.", id);
-        return "Car update request approved without a problem!";
+        return "Car update approval request has ben approved!";
     }
 
     @PostMapping("/reject/{id}")
     public String rejectUpdate(@PathVariable Long id) {
+        log.warn("❌ Rejecticion request has been sent. Request ID: {}", id);
         approvalService.rejectUpdate(id);
-        log.info("Update request with ID {} rejected successfully.", id);
-        return "Car update rejected without a problem!";
+        return "Car update approval request has ben rejected.";
     }
 }

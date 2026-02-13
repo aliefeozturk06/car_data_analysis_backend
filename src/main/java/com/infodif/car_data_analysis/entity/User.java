@@ -86,7 +86,11 @@ public class User implements UserDetails {
         return id != null && id.equals(user.getId());
     }
 
-    public User(@NotBlank(message = "Username cannot be empty") String username, @Nullable String encode, Role role, BigDecimal bigDecimal) {
+    public User(String username, String password, Role role, BigDecimal balance) {
+        this.username = username;
+        this.password = password;
+        this.role = role;
+        this.balance = balance;
     }
 
     @Override

@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class UserController {
 
@@ -25,13 +24,13 @@ public class UserController {
 
     @GetMapping("/{username}/balance")
     public BigDecimal getBalance(@PathVariable String username) {
-        log.info("Checking balance for user: {}", username);
+        log.info("Fetching account balance for user: {}", username);
         return userService.getBalance(username);
     }
 
     @PutMapping("/add-balance")
     public BigDecimal addBalance(@RequestParam String username, @RequestParam BigDecimal amount) {
-        log.info("Adding balance: {} to user: {}", amount, username);
+        log.info("Processing balance deposit of {} for user: {}", amount, username);
         return userService.addBalance(username, amount);
     }
 }

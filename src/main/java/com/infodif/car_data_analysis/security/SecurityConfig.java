@@ -39,23 +39,14 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .authorizeHttpRequests(auth -> auth
+                        // 🚨 KRİTİK: OPTIONS isteği gelirse durdurma, hepsine izin ver
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/users/**").permitAll()
-
-                        .requestMatchers("/api/purchase/**").hasAnyAuthority("ROLE_USER", "ROLE_MODERATOR")
-
-                        .requestMatchers("/api/approvals/**").hasAuthority("ROLE_MODERATOR")
-
-                        .requestMatchers(HttpMethod.GET, "/api/cars/**").permitAll()
-
                         .anyRequest().authenticated()
                 )
-
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -66,13 +57,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
-
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
-
+        // React adresini mühürlüyoruz (Credentials true ise "*" kullanamayız)
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -86,12 +76,18 @@ public class SecurityConfig {
             public Authentication authenticate(Authentication authentication) throws AuthenticationException {
                 String username = authentication.getName();
                 String password = (String) authentication.getCredentials();
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
+                // Manuel password kontrolü
                 if (passwordEncoder().matches(password, userDetails.getPassword())) {
-                    return new UsernamePasswordAuthenticationToken(userDetails, password, userDetails.getAuthorities());
+                    return new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
                 } else {
-                    throw new BadCredentialsException("Username or password is wrong!");
+                    throw new BadCredentialsException("Wrong username or password!");
                 }
             }
 

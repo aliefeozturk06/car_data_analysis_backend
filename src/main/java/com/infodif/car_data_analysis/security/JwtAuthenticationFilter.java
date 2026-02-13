@@ -32,45 +32,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String username;
+        // 🚨 KRİTİK: Tarayıcının ön kontrollerini (OPTIONS) filtreye sokmadan serbest bırak
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
+        final String authHeader = request.getHeader("Authorization");
+
+        // Token yoksa bir sonraki filtreye geç ama burada dur
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
+        final String jwt = authHeader.substring(7);
 
         try {
-            username = jwtUtil.extractUsername(jwt);
+            final String username = jwtUtil.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                log.info("JWT Filter -> User: {}", username);
-                log.info("JWT Filter -> Uploaded Roles (Roles): {}", userDetails.getAuthorities());
-
                 if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
                             userDetails.getAuthorities()
                     );
-
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.info("JWT Filter -> SecurityContext Updated! Approven given.");
-                } else {
-                    log.warn("JWT Filter -> Unvalid token!");
                 }
             }
         } catch (Exception e) {
-            log.error("JWT Filter Error: User cannot verified", e);
+            log.error("JWT Filter Error: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

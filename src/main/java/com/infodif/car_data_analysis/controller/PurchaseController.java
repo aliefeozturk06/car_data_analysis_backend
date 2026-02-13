@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/purchase")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
 @Slf4j
 public class PurchaseController {
 
@@ -24,7 +23,7 @@ public class PurchaseController {
 
     @PostMapping("/buy")
     public String buyCar(@RequestParam String username, @RequestParam Long carId) {
-        log.info("User {} is attempting to buy car ID {}", username, carId);
+        log.info("User {} is attempting to purchase car with ID: {}", username, carId);
         return purchaseService.buyCar(username, carId);
     }
 
@@ -33,14 +32,13 @@ public class PurchaseController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUsername = auth.getName();
 
-        log.info("📢 Update request received for car ID: {} from user: {}", request.carId(), currentUsername);
-
+        log.info("Update request received for car ID: {} from user: {}", request.carId(), currentUsername);
         return purchaseService.createUpdateRequest(request);
     }
 
     @PostMapping("/cancel-update-request")
     public String cancelUpdateRequest(@RequestParam String username, @RequestParam Long carId) {
-        log.info("Cancelling update request for car {} by user {}", carId, username);
+        log.info("Cancelling update request for car ID: {} by user: {}", carId, username);
         return purchaseService.cancelUpdateRequest(username, carId);
     }
 
@@ -49,49 +47,49 @@ public class PurchaseController {
             @RequestParam String username,
             @RequestParam String status,
             @ModelAttribute CarFilterDTO filter) {
-        log.info("Fetching cars for user {} with status {}", username, status);
+        log.info("Fetching cars for user: {} with status: {}", username, status);
         return purchaseService.getMyCars(username, status, filter);
     }
 
     @GetMapping("/sold-history")
     public List<TransactionDTO> getSoldHistory(@RequestParam String username) {
-        log.info("Fetching sold history for user {}", username);
+        log.info("Fetching sales history for user: {}", username);
         return purchaseService.getSoldHistory(username);
     }
 
     @GetMapping("/my-pending-requests")
     public List<UpdateCarRequestDTO> getMyPendingRequests(@RequestParam String username) {
-        log.info("Fetching pending update requests for user {}", username);
+        log.info("Fetching pending update requests for user: {}", username);
         return purchaseService.getMyPendingRequests(username);
     }
 
     @PutMapping("/list-for-sale")
     public String listForSale(@RequestParam String username, @RequestParam Long carId) {
-        log.info("User {} listing car {} for sale", username, carId);
+        log.info("User {} is listing car ID: {} for sale", username, carId);
         return purchaseService.listForSale(username, carId);
     }
 
     @PutMapping("/cancel-sale")
     public String cancelSale(@RequestParam String username, @RequestParam Long carId) {
-        log.info("User {} cancelling sale for car {}", username, carId);
+        log.info("User {} is cancelling sale for car ID: {}", username, carId);
         return purchaseService.cancelSale(username, carId);
     }
 
     @GetMapping("/moderator/all-pending-requests")
     public List<UpdateCarRequestDTO> getAllPendingRequests() {
-        log.info("Moderator fetching all pending approvals.");
+        log.info("Moderator is fetching all pending approval requests.");
         return purchaseService.getAllPendingApprovals();
     }
 
     @PostMapping("/moderator/approve/{id}")
     public String approveRequest(@PathVariable Long id) {
-        log.info("Moderator approving request ID: {}", id);
+        log.info("Moderator is approving request ID: {}", id);
         return purchaseService.approveCarUpdate(id);
     }
 
     @PostMapping("/moderator/reject/{id}")
     public String rejectRequest(@PathVariable Long id) {
-        log.info("Moderator rejecting request ID: {}", id);
+        log.warn("Moderator is rejecting request ID: {}", id);
         return purchaseService.rejectCarUpdate(id);
     }
 }
