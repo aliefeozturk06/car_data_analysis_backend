@@ -3,6 +3,7 @@ package com.infodif.car_data_analysis.service;
 import com.infodif.car_data_analysis.dto.*;
 import com.infodif.car_data_analysis.entity.Car;
 import com.infodif.car_data_analysis.entity.User;
+import com.infodif.car_data_analysis.exception.ResourceNotFoundException;
 import com.infodif.car_data_analysis.mapper.CarMapper;
 import com.infodif.car_data_analysis.repository.CarRepository;
 import com.infodif.car_data_analysis.repository.UserRepository;
@@ -33,7 +34,6 @@ public class CarService {
     private final CarMapper carMapper;
 
     public CarListResponseDTO getAllCars(CarFilterDTO filter, String currentUsername) {
-        // 1. Dinamik Sıralama Mantığı
         List<Sort.Order> orders = new ArrayList<>();
         if (filter.sort() != null && !filter.sort().isEmpty()) {
             String[] sortParts = filter.sort().split(",");
@@ -86,9 +86,9 @@ public class CarService {
 
     @Cacheable(value = "cars", key = "#id")
     public CarResponseDTO getCarById(Long id) {
-        Car car = carRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Car not found!"));
-        return carMapper.toResponseDto(car);
+        return carRepository.findById(id)
+                .map(carMapper::toResponseDto)
+                .orElseThrow(() -> new ResourceNotFoundException("There are no car has an ID you choose! ID: " + id));
     }
 
     @Transactional
