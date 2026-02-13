@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RestController
 @RequestMapping("/api/cars")
 @RequiredArgsConstructor
@@ -17,28 +19,46 @@ public class CarController {
 
     @GetMapping
     public CarListResponseDTO getAll(CarFilterDTO filterDto) {
-        log.info("📢 All cars are listing. Filter criterias: {}", filterDto);
-        return carService.getAllCars(filterDto);
+        log.info("📢 Market listing requested. Filters: {}", filterDto);
+        return carService.getAllCars(filterDto, null);
+    }
+
+    @GetMapping("/my-cars")
+    public CarListResponseDTO getMyCars(CarFilterDTO filterDto, Principal principal) {
+        log.info("🏠 My Cars requested by user: {}", principal.getName());
+        return carService.getAllCars(filterDto, principal.getName());
     }
 
     @GetMapping("/{id}")
     public CarResponseDTO getById(@PathVariable Long id) {
-        log.info("🔍 Car details are listing. ID: {}", id);
+        log.info("🔍 Fetching car details. ID: {}", id);
         return carService.getCarById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CarResponseDTO createCar(@RequestBody CarRequestDTO requestDto, @RequestParam String username) {
-        log.info("🚗 New car adding request! Owner: {}, Car: {} {}",
-                username, requestDto.manufacturer(), requestDto.model());
-        return carService.createCar(requestDto, username);
+    public CarResponseDTO createCar(@RequestBody CarRequestDTO requestDto, Principal principal) {
+        log.info("🚗 New car registration. Owner: {}, Car: {} {}",
+                principal.getName(), requestDto.manufacturer(), requestDto.model());
+        return carService.createCar(requestDto, principal.getName());
+    }
+
+    @PutMapping("/{id}")
+    public CarResponseDTO updateCar(@PathVariable Long id, @RequestBody CarRequestDTO requestDto) {
+        log.info("🔄 Updating car ID: {}", id);
+        return carService.updateCar(id, requestDto);
+    }
+
+    @PatchMapping("/{id}")
+    public CarResponseDTO patchCar(@PathVariable Long id, @RequestBody CarUpdateDTO updateDto) {
+        log.info("🩹 Patching car ID: {}", id);
+        return carService.patchCar(id, updateDto);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCar(@PathVariable Long id) {
-        log.warn("🗑️ Car is deleting! Deleted Car's ID: {}", id);
+        log.warn("🗑️ Deleting car ID: {}", id);
         carService.deleteCar(id);
     }
 }

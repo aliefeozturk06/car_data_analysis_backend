@@ -6,7 +6,8 @@ import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.mapper.CarMapper;
 import com.infodif.car_data_analysis.repository.CarRepository;
 import com.infodif.car_data_analysis.repository.UserRepository;
-import jakarta.persistence.criteria.Predicate;
+import com.infodif.car_data_analysis.specification.CarSpecifications;
+import jakarta.persistence.criteria.JoinType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -31,55 +32,43 @@ public class CarService {
     private final UserRepository userRepository;
     private final CarMapper carMapper;
 
-    public CarListResponseDTO getAllCars(CarFilterDTO filter) {
+    public CarListResponseDTO getAllCars(CarFilterDTO filter, String currentUsername) {
+        // 1. Dinamik Sıralama Mantığı
         List<Sort.Order> orders = new ArrayList<>();
         if (filter.sort() != null && !filter.sort().isEmpty()) {
             String[] sortParts = filter.sort().split(",");
             for (int i = 0; i < sortParts.length; i += 2) {
                 String property = sortParts[i];
-                String direction = (i + 1 < sortParts.length) ? sortParts[i+1] : "asc";
+                String direction = (i + 1 < sortParts.length) ? sortParts[i + 1] : "asc";
+                orders.add(direction.equalsIgnoreCase("desc") ? Sort.Order.desc(property) : Sort.Order.asc(property));
+            }
+        }
+        if (orders.isEmpty()) orders.add(Sort.Order.asc("id"));
+        Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(orders));
 
-                Sort.Order order = direction.equalsIgnoreCase("desc")
-                        ? Sort.Order.desc(property)
-                        : Sort.Order.asc(property);
-                orders.add(order);
+        Specification<Car> spec = (root, query, cb) -> cb.conjunction();
+
+        if (currentUsername != null && !currentUsername.isBlank()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.join("owner", JoinType.LEFT).get("username"), currentUsername)
+            );
+        } else {
+            if (filter.status() != null && !filter.status().isBlank() && !"ALL".equalsIgnoreCase(filter.status())) {
+                spec = spec.and(CarSpecifications.hasStatus(filter.status()));
+            } else {
+                spec = spec.and((root, query, cb) -> cb.or(
+                        cb.isNull(root.get("owner")),
+                        cb.equal(root.get("status").as(String.class), "ON_SALE")
+                ));
             }
         }
 
-        if (orders.isEmpty()) {
-            orders.add(Sort.Order.asc("id"));
-        }
-
-        Sort sort = Sort.by(orders);
-        Pageable pageable = PageRequest.of(filter.page(), filter.size(), sort);
-
-        Specification<Car> spec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            predicates.add(cb.or(
-                    cb.isNull(root.get("owner")),
-                    cb.equal(root.get("status"), "ON_SALE")
-            ));
-
-            if (filter.manufacturer() != null && !filter.manufacturer().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.get("manufacturer")), filter.manufacturer().toLowerCase()));
-            }
-
-            if (filter.model() != null && !filter.model().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.model().toLowerCase() + "%"));
-            }
-
-            if (filter.color() != null && !filter.color().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.get("color")), filter.color().toLowerCase()));
-            }
-
-            if (filter.minYear() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.minYear()));
-            if (filter.maxYear() != null) predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.maxYear()));
-            if (filter.minPrice() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));
-            if (filter.maxPrice() != null) predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.maxPrice()));
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+        spec = spec.and(CarSpecifications.hasManufacturer(filter.manufacturer()))
+                .and(CarSpecifications.hasModel(filter.model()))
+                .and(CarSpecifications.hasColor(filter.color()))
+                .and(CarSpecifications.hasYearBetween(filter.minYear(), filter.maxYear()))
+                .and(CarSpecifications.hasPriceBetween(filter.minPrice(), filter.maxPrice()))
+                .and(CarSpecifications.hasMileageBetween(filter.minMileage(), filter.maxMileage()));
 
         Page<Car> carPage = carRepository.findAll(spec, pageable);
 
@@ -87,10 +76,8 @@ public class CarService {
                 .map(carMapper::toResponseDto)
                 .toList();
 
-        String message = "Total " + carPage.getTotalElements() + " cars found.";
-
         return new CarListResponseDTO(
-                message,
+                "Total " + carPage.getTotalElements() + " cars found.",
                 carPage.getTotalElements(),
                 carPage.getTotalPages(),
                 dtoList
