@@ -11,4 +11,6 @@ import java.util.List;
 public interface CarUpdateApprovalRepository extends JpaRepository<CarUpdateApproval, Long> {
     List<CarUpdateApproval> findByUsernameAndStatus(String username, ApprovalStatus status);
     List<CarUpdateApproval> findByStatus(ApprovalStatus status);
+
+    long countByUsernameAndStatus(String username, ApprovalStatus status);
 }

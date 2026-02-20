@@ -18,20 +18,20 @@ public class CarUpdateApprovalController {
 
     @GetMapping("/pending")
     public List<UpdateCarRequestDTO> getPendingUpdates() {
-        log.info("🛡️ Moderator gets all the waiting update requests.");
+        log.info("🛡Moderator gets all the waiting update requests.");
         return approvalService.getAllPendingRequests();
     }
 
     @PostMapping("/approve/{id}")
     public String approveUpdate(@PathVariable Long id) {
-        log.info("✅ Approval request has been sent. Request ID: {}", id);
+        log.info("Approval request has been sent. Request ID: {}", id);
         approvalService.approveUpdate(id);
         return "Car update approval request has ben approved!";
     }
 
     @PostMapping("/reject/{id}")
     public String rejectUpdate(@PathVariable Long id) {
-        log.warn("❌ Rejecticion request has been sent. Request ID: {}", id);
+        log.warn("Rejection request has been sent. Request ID: {}", id);
         approvalService.rejectUpdate(id);
         return "Car update approval request has ben rejected.";
     }

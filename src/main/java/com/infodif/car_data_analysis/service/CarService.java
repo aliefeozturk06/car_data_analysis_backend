@@ -2,6 +2,7 @@ package com.infodif.car_data_analysis.service;
 
 import com.infodif.car_data_analysis.dto.*;
 import com.infodif.car_data_analysis.entity.Car;
+import com.infodif.car_data_analysis.entity.Role;
 import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.exception.ResourceNotFoundException;
 import com.infodif.car_data_analysis.mapper.CarMapper;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,11 +98,19 @@ public class CarService {
     @CacheEvict(value = "cars", allEntries = true)
     public CarResponseDTO createCar(CarRequestDTO dto, String username) {
         User owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User cannot found!"));
 
         Car car = carMapper.toEntity(dto);
         car.setOwner(owner);
-        car.setStatus("OWNED");
+
+        if (owner.getRole() == Role.ROLE_ADMIN || owner.getRole() == Role.ROLE_MODERATOR) {
+            car.setStatus("OWNED");
+            log.info("Authorized User ({}) car added, approval skipped. Role: {}", username, owner.getRole());
+        }
+        else {
+            car.setStatus("APPROVAL_WAITING");
+            log.info("Standart User ({}) waiting for approval.", username);
+        }
 
         return carMapper.toResponseDto(carRepository.save(car));
     }
@@ -111,6 +122,25 @@ public class CarService {
                 .orElseThrow(() -> new RuntimeException("Car for update not found!"));
 
         carMapper.updateEntityFromDto(dto, car);
+
+        // 👑 KURŞUN GEÇİRMEZ VIP KONTROLÜ
+        boolean isVip = false;
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MODERATOR"))) {
+            isVip = true;
+        } else if (car.getOwner() != null && car.getOwner().getRole() != null &&
+                (car.getOwner().getRole().name().contains("ADMIN") || car.getOwner().getRole().name().contains("MODERATOR"))) {
+            isVip = true;
+        }
+
+        if (isVip) {
+            car.setStatus("OWNED");
+            log.info("VIP Update: Araba ID {} status changed as OWNED.", id);
+        } else {
+            car.setStatus("APPROVAL_WAITING");
+            log.info("Standart User Update: Car ID {} waiting for approval.", id);
+        }
 
         return carMapper.toResponseDto(carRepository.save(car));
     }
@@ -126,6 +156,24 @@ public class CarService {
         }
 
         carMapper.patchEntityFromDto(updateDto, car);
+
+        boolean isVip = false;
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MODERATOR"))) {
+            isVip = true;
+        } else if (car.getOwner() != null && car.getOwner().getRole() != null &&
+                (car.getOwner().getRole().name().contains("ADMIN") || car.getOwner().getRole().name().contains("MODERATOR"))) {
+            isVip = true;
+        }
+
+        if (isVip) {
+            car.setStatus("OWNED");
+            log.info("VIP Patch: Car ID {} status changed as OWNED.", id);
+        } else {
+            car.setStatus("APPROVAL_WAITING");
+            log.info("Standart User Patch: Car ID {} waiting for approval.", id);
+        }
 
         return carMapper.toResponseDto(carRepository.save(car));
     }
