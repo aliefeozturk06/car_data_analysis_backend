@@ -100,13 +100,13 @@ public class PurchaseService {
         Car car = carRepository.findById(dto.carId())
                 .orElseThrow(() -> new RuntimeException("Car cannot found!"));
 
-        if (user.getRole() == Role.ROLE_MODERATOR) {
+        if (user.getRole() == Role.ROLE_MODERATOR || user.getRole() == Role.ROLE_ADMIN) {
             if (car.getOwner() != null && car.getOwner().getUsername().equals(dto.username())) {
                 if (dto.newPrice() != null) car.setPrice(dto.newPrice());
                 if (dto.newColor() != null) car.setColor(dto.newColor());
                 if (dto.newMileage() != null) car.setMileage(dto.newMileage());
                 carRepository.save(car);
-                return "Dear Moderator, your car is updated!";
+                return "Dear " + user.getRole().name().replace("ROLE_", "") + ", your car is updated instantly!";
             }
         }
 
@@ -114,7 +114,7 @@ public class PurchaseService {
                 .stream().anyMatch(req -> req.getCarId().equals(dto.carId()));
 
         if (alreadyPending) {
-            throw new RuntimeException("There is an already an approval request for this car!");
+            throw new RuntimeException("There is already an approval request for this car!");
         }
 
         CarUpdateApproval approval = new CarUpdateApproval(
