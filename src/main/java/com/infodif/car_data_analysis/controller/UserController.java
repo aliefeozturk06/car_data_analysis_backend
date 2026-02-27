@@ -33,4 +33,10 @@ public class UserController {
         log.info("Processing balance deposit of {} for user: {}", amount, username);
         return userService.addBalance(username, amount);
     }
+
+    @PutMapping("/update-username")
+    public String updateUsername(@RequestParam String currentUsername, @RequestParam String newUsername) {
+        userService.updateUsername(currentUsername, newUsername);
+        return "Username updated successfully.";
+    }
 }

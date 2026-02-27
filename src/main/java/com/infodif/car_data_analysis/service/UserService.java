@@ -45,4 +45,17 @@ public class UserService {
 
         return user.getBalance();
     }
+
+    @Transactional
+    public void updateUsername(String currentUsername, String newUsername) {
+        if (userRepository.findByUsername(newUsername).isPresent()) {
+            throw new RuntimeException("This username is already taken!");
+        }
+
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        user.setUsername(newUsername);
+        userRepository.save(user);
+    }
 }
