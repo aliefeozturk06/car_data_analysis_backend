@@ -21,9 +21,17 @@
         private final CarUpdateApprovalMapper approvalMapper;
 
         public List<UpdateCarRequestDTO> getAllPendingRequests() {
-            log.info("Fetching all pending car update requests for moderator.");
-
             return approvalRepository.findByStatus(ApprovalStatus.PENDING)
+                    .stream()
+                    .map(approval -> {
+                        Car car = carRepository.findById(approval.getCarId()).orElse(null);
+                        return approvalMapper.toDto(approval, car);
+                    })
+                    .toList();
+        }
+
+        public List<UpdateCarRequestDTO> getUserRequestHistory(String username) {
+            return approvalRepository.findByUsernameOrderByRequestDateDesc(username)
                     .stream()
                     .map(approval -> {
                         Car car = carRepository.findById(approval.getCarId()).orElse(null);
@@ -34,33 +42,25 @@
 
         @Transactional
         public void approveUpdate(Long approvalId) {
-            log.info("Approving update request ID: {}", approvalId);
-
             CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                    .orElseThrow(() -> new RuntimeException("Request cannot found!"));
+                    .orElseThrow(() -> new RuntimeException("Request not found!"));
 
             Car car = carRepository.findById(approval.getCarId())
-                    .orElseThrow(() -> new RuntimeException("Car cannot found!"));
+                    .orElseThrow(() -> new RuntimeException("Car not found!"));
 
             if (approval.getNewPrice() != null) car.setPrice(approval.getNewPrice());
             if (approval.getNewColor() != null) car.setColor(approval.getNewColor());
             if (approval.getNewMileage() != null) car.setMileage(approval.getNewMileage());
 
             carRepository.save(car);
-
             approval.setStatus(ApprovalStatus.APPROVED);
             approvalRepository.save(approval);
         }
 
         @Transactional
         public void rejectUpdate(Long approvalId) {
-            log.info("Rejecting update request ID: {}", approvalId);
-
-            CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                    .orElseThrow(() -> new RuntimeException("Request cannot found!"));
-
+            CarUpdateApproval approval = approvalRepository.findById(approvalId).orElseThrow();
             approval.setStatus(ApprovalStatus.REJECTED);
             approvalRepository.save(approval);
         }
-
     }

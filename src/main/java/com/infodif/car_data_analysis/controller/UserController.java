@@ -39,4 +39,11 @@ public class UserController {
         userService.updateUsername(currentUsername, newUsername);
         return "Username updated successfully.";
     }
+
+    @PutMapping("/update-location")
+    public String updateLocation(@RequestParam String username, @RequestParam String newLocation) {
+        log.info("Updating location for user: {} to {}", username, newLocation);
+        userService.updateLocation(username, newLocation);
+        return "Location updated successfully.";
+    }
 }

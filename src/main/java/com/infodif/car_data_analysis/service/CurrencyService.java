@@ -1,37 +1,44 @@
 package com.infodif.car_data_analysis.service;
 
+import com.infodif.car_data_analysis.client.CurrencyClient;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.JsonNode;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CurrencyService {
 
-    private final String API_URL = "https://api.frankfurter.app/latest?from=TRY";
+    private final CurrencyClient currencyClient;
 
     public Map<String, Double> getExchangeRates() {
-        RestTemplate restTemplate = new RestTemplate();
         Map<String, Double> rates = new HashMap<>();
 
         try {
-            Map response = restTemplate.getForObject(API_URL, Map.class);
+            JsonNode response = currencyClient.getLatestRates("TRY");
 
-            if (response != null && response.containsKey("rates")) {
-                Map<String, Object> ratesData = (Map<String, Object>) response.get("rates");
+            if (response != null && response.has("rates")) {
+                JsonNode ratesNode = response.get("rates");
 
-                if (ratesData.containsKey("USD")) rates.put("USD", Double.valueOf(ratesData.get("USD").toString()));
-                if (ratesData.containsKey("EUR")) rates.put("EUR", Double.valueOf(ratesData.get("EUR").toString()));
-                if (ratesData.containsKey("GBP")) rates.put("GBP", Double.valueOf(ratesData.get("GBP").toString()));
+                if (ratesNode.has("USD")) rates.put("USD", ratesNode.get("USD").asDouble());
+                if (ratesNode.has("EUR")) rates.put("EUR", ratesNode.get("EUR").asDouble());
+                if (ratesNode.has("GBP")) rates.put("GBP", ratesNode.get("GBP").asDouble());
 
                 rates.put("TRY", 1.0);
+                log.info("Exchange rates updated successfully.");
             }
         } catch (Exception e) {
-            System.err.println("CANLI KUR HATASI: " + e.getMessage());
+            log.error("LIVE RATE ERROR: {}. Activating fallback rates.", e.getMessage());
+
             rates.put("TRY", 1.0);
-            rates.put("USD", 0.032);
+            rates.put("USD", 0.031);
             rates.put("EUR", 0.029);
-            rates.put("GBP", 0.025);
+            rates.put("GBP", 0.024);
         }
 
         return rates;

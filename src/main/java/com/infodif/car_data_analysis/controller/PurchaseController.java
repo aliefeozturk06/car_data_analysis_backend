@@ -8,7 +8,6 @@ import com.infodif.car_data_analysis.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,12 +27,27 @@ public class PurchaseController {
     }
 
     @PostMapping("/create-update-request")
-    public String createUpdateRequest(@RequestBody UpdateCarRequestDTO request) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    public String createUpdateRequest(@RequestBody UpdateCarRequestDTO request, Authentication auth) {
         String currentUsername = auth.getName();
-
         log.info("Update request received for car ID: {} from user: {}", request.carId(), currentUsername);
-        return purchaseService.createUpdateRequest(request);
+
+        UpdateCarRequestDTO securedDto = new UpdateCarRequestDTO(
+                request.id(),
+                request.carId(),
+                currentUsername,
+                request.newPrice(),
+                request.newColor(),
+                request.newMileage(),
+                request.oldPrice(),
+                request.oldColor(),
+                request.oldMileage(),
+                request.manufacturer(),
+                request.model(),
+                request.status(),
+                request.requestDate()
+        );
+
+        return purchaseService.createUpdateRequest(securedDto);
     }
 
     @PostMapping("/cancel-update-request")
@@ -47,7 +61,7 @@ public class PurchaseController {
             @RequestParam String username,
             @RequestParam String status,
             @ModelAttribute CarFilterDTO filter) {
-        log.info("Fetching cars for user: {} with status: {}", username, status);
+        log.info("User {} is viewing their own cars. Distance will be calculated based on this user.", username);
         return purchaseService.getMyCars(username, status, filter);
     }
 
@@ -61,6 +75,12 @@ public class PurchaseController {
     public List<UpdateCarRequestDTO> getMyPendingRequests(@RequestParam String username) {
         log.info("Fetching pending update requests for user: {}", username);
         return purchaseService.getMyPendingRequests(username);
+    }
+
+    @GetMapping("/my-update-history")
+    public List<UpdateCarRequestDTO> getMyUpdateHistory(@RequestParam String username) {
+        log.info("Fetching full update history for user: {}", username);
+        return purchaseService.getMyUpdateHistory(username);
     }
 
     @PutMapping("/list-for-sale")

@@ -19,7 +19,7 @@ public class CurrencyController {
 
     @GetMapping("/rates")
     public Map<String, Double> getRates() {
-        log.info("Fetching current currency exchange rates.");
+        log.info("📢 Current currency exchange rates requested by frontend.");
         return currencyService.getExchangeRates();
     }
 }

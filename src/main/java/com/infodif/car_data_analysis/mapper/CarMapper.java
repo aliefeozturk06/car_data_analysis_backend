@@ -13,6 +13,7 @@ import org.mapstruct.*;
 public interface CarMapper {
 
     @Mapping(target = "isUsed", expression = "java(car.getMileage() != null && car.getMileage() > 0)")
+    @Mapping(source = "owner.location", target = "sellerLocation", defaultValue = "Unknown Location")
     CarResponseDTO toResponseDto(Car car);
 
     @Mapping(target = "id", ignore = true)

@@ -11,28 +11,29 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/approvals")
 @RequiredArgsConstructor
-@Slf4j
 public class CarUpdateApprovalController {
 
     private final CarUpdateApprovalService approvalService;
 
     @GetMapping("/pending")
     public List<UpdateCarRequestDTO> getPendingUpdates() {
-        log.info("🛡Moderator gets all the waiting update requests.");
         return approvalService.getAllPendingRequests();
+    }
+
+    @GetMapping("/my-history/{username}")
+    public List<UpdateCarRequestDTO> getMyHistory(@PathVariable String username) {
+        return approvalService.getUserRequestHistory(username);
     }
 
     @PostMapping("/approve/{id}")
     public String approveUpdate(@PathVariable Long id) {
-        log.info("Approval request has been sent. Request ID: {}", id);
         approvalService.approveUpdate(id);
-        return "Car update approval request has ben approved!";
+        return "Update approved and applied to car!";
     }
 
     @PostMapping("/reject/{id}")
     public String rejectUpdate(@PathVariable Long id) {
-        log.warn("Rejection request has been sent. Request ID: {}", id);
         approvalService.rejectUpdate(id);
-        return "Car update approval request has ben rejected.";
+        return "Update request has been rejected.";
     }
 }

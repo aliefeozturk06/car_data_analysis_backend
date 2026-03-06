@@ -35,10 +35,10 @@ public class PurchaseService {
     @Transactional
     public String buyCar(String username, Long carId) {
         Car car = carRepository.findById(carId)
-                .orElseThrow(() -> new RuntimeException("Car cannot found!"));
+                .orElseThrow(() -> new RuntimeException("Car not found!"));
 
         User buyer = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User cannot found!"));
+                .orElseThrow(() -> new RuntimeException("User not found!"));
 
         boolean isBrandNew = car.getOwner() == null;
         boolean isOnSale = "ON_SALE".equals(car.getStatus());
@@ -66,17 +66,10 @@ public class PurchaseService {
         }
 
         Transaction transaction = new Transaction(
-                car.getId(),
-                sellerName,
-                buyer.getUsername(),
-                car.getManufacturer(),
-                car.getModel(),
-                car.getColor(),
-                car.getYear(),
-                car.getMileage(),
-                carPrice.doubleValue()
+                car.getId(), sellerName, buyer.getUsername(),
+                car.getManufacturer(), car.getModel(), car.getColor(),
+                car.getYear(), car.getMileage(), carPrice.doubleValue()
         );
-
         transactionRepository.save(transaction);
 
         car.setStatus("OWNED");
@@ -95,10 +88,10 @@ public class PurchaseService {
         }
 
         User user = userRepository.findByUsername(dto.username())
-                .orElseThrow(() -> new RuntimeException("User cannot found!"));
+                .orElseThrow(() -> new RuntimeException("User not found!"));
 
         Car car = carRepository.findById(dto.carId())
-                .orElseThrow(() -> new RuntimeException("Car cannot found!"));
+                .orElseThrow(() -> new RuntimeException("Car not found!"));
 
         if (user.getRole() == Role.ROLE_MODERATOR || user.getRole() == Role.ROLE_ADMIN) {
             if (car.getOwner() != null && car.getOwner().getUsername().equals(dto.username())) {
@@ -106,7 +99,7 @@ public class PurchaseService {
                 if (dto.newColor() != null) car.setColor(dto.newColor());
                 if (dto.newMileage() != null) car.setMileage(dto.newMileage());
                 carRepository.save(car);
-                return "Dear " + user.getRole().name().replace("ROLE_", "") + ", your car is updated instantly!";
+                return "VIP Update: Your car is updated instantly!";
             }
         }
 
@@ -114,35 +107,112 @@ public class PurchaseService {
                 .stream().anyMatch(req -> req.getCarId().equals(dto.carId()));
 
         if (alreadyPending) {
-            throw new RuntimeException("There is already an approval request for this car!");
+            throw new RuntimeException("There is already a pending approval request for this car!");
         }
 
         CarUpdateApproval approval = new CarUpdateApproval(
-                dto.carId(),
+                car.getId(),
                 dto.username(),
                 user,
+                car.getPrice(),
                 dto.newPrice(),
+                car.getColor(),
                 dto.newColor(),
+                car.getMileage(),
                 dto.newMileage()
         );
 
         approvalRepository.save(approval);
-        return "Approval request has been sent, it is waiting for an approval.";
+        return "Approval request has been sent.";
+    }
+
+    @Transactional
+    public String approveCarUpdate(Long approvalId) {
+        CarUpdateApproval approval = approvalRepository.findById(approvalId)
+                .orElseThrow(() -> new RuntimeException("Request not found!"));
+
+        Car car = carRepository.findById(approval.getCarId())
+                .orElseThrow(() -> new RuntimeException("Car not found!"));
+
+        boolean isOwnerChanged = (car.getOwner() == null) || !car.getOwner().getUsername().equals(approval.getUsername());
+        if (isOwnerChanged) {
+            approval.setStatus(ApprovalStatus.REJECTED);
+            approvalRepository.save(approval);
+            return "OWNER_CHANGED";
+        }
+
+        if (approval.getNewPrice() != null) car.setPrice(approval.getNewPrice());
+        if (approval.getNewColor() != null) car.setColor(approval.getNewColor());
+        if (approval.getNewMileage() != null) car.setMileage(approval.getNewMileage());
+
+        carRepository.save(car);
+
+        approval.setStatus(ApprovalStatus.APPROVED);
+        approvalRepository.save(approval);
+
+        return "SUCCESS";
+    }
+
+    @Transactional
+    public String rejectCarUpdate(Long approvalId) {
+        CarUpdateApproval approval = approvalRepository.findById(approvalId)
+                .orElseThrow(() -> new RuntimeException("Request not found!"));
+
+        approval.setStatus(ApprovalStatus.REJECTED);
+        approvalRepository.save(approval);
+
+        return "Rejected.";
+    }
+
+    private UpdateCarRequestDTO mapToRequestDto(CarUpdateApproval approval) {
+        Car car = carRepository.findById(approval.getCarId()).orElse(null);
+        return new UpdateCarRequestDTO(
+                approval.getId(),
+                approval.getCarId(),
+                approval.getUsername(),
+                approval.getNewPrice(),
+                approval.getNewColor(),
+                approval.getNewMileage(),
+                approval.getOldPrice(),
+                approval.getOldColor(),
+                approval.getOldMileage(),
+                car != null ? car.getManufacturer() : "N/A",
+                car != null ? car.getModel() : "N/A",
+                approval.getStatus().name(),
+                approval.getRequestDate()
+        );
+    }
+
+    public List<UpdateCarRequestDTO> getAllPendingApprovals() {
+        return approvalRepository.findByStatus(ApprovalStatus.PENDING)
+                .stream().map(this::mapToRequestDto).toList();
+    }
+
+    public List<UpdateCarRequestDTO> getMyUpdateHistory(String username) {
+        return approvalRepository.findByUsernameOrderByRequestDateDesc(username)
+                .stream().map(this::mapToRequestDto).toList();
+    }
+
+    public List<UpdateCarRequestDTO> getMyPendingRequests(String username) {
+        return approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
+                .stream().map(this::mapToRequestDto).toList();
     }
 
     @Transactional
     public String cancelUpdateRequest(String username, Long carId) {
-        List<CarUpdateApproval> requests = approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING);
-        CarUpdateApproval targetRequest = requests.stream()
+        approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
+                .stream()
                 .filter(req -> req.getCarId().equals(carId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Approval request cannot found for this car!"));
-
-        approvalRepository.delete(targetRequest);
-        return "Approval request has been deleted.";
+                .ifPresent(approvalRepository::delete);
+        return "Approval request deleted.";
     }
 
     public List<CarResponseDTO> getMyCars(String username, String status, CarFilterDTO filter) {
+        User viewer = userRepository.findByUsername(username).orElse(null);
+        Double vLat = (viewer != null) ? viewer.getLatitude() : null;
+        Double vLng = (viewer != null) ? viewer.getLongitude() : null;
+
         Specification<Car> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("owner").get("username"), username));
@@ -154,15 +224,12 @@ public class PurchaseService {
             }
 
             if (filter != null) {
-                if (filter.manufacturer() != null && !filter.manufacturer().isEmpty()) {
+                if (filter.manufacturer() != null && !filter.manufacturer().isEmpty())
                     predicates.add(cb.like(cb.lower(root.get("manufacturer")), "%" + filter.manufacturer().toLowerCase() + "%"));
-                }
-                if (filter.model() != null && !filter.model().isEmpty()) {
+                if (filter.model() != null && !filter.model().isEmpty())
                     predicates.add(cb.like(cb.lower(root.get("model")), "%" + filter.model().toLowerCase() + "%"));
-                }
-                if (filter.color() != null && !filter.color().isEmpty()) {
+                if (filter.color() != null && !filter.color().isEmpty())
                     predicates.add(cb.like(cb.lower(root.get("color")), "%" + filter.color().toLowerCase() + "%"));
-                }
                 if (filter.minYear() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("year"), filter.minYear()));
                 if (filter.maxYear() != null) predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.maxYear()));
                 if (filter.minPrice() != null) predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));
@@ -171,101 +238,60 @@ public class PurchaseService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return carRepository.findAll(spec)
-                .stream()
+        return carRepository.findAll(spec).stream()
                 .map(car -> {
                     CarResponseDTO dto = carMapper.toResponseDto(car);
-                    boolean hasPending = approvalRepository.findByUsernameAndStatus(
-                                    car.getOwner() != null ? car.getOwner().getUsername() : "", ApprovalStatus.PENDING)
+
+                    Double distance = null;
+                    if (vLat != null && vLng != null && car.getOwner() != null &&
+                            car.getOwner().getLatitude() != null && car.getOwner().getLongitude() != null) {
+                        distance = calculateHaversine(vLat, vLng, car.getOwner().getLatitude(), car.getOwner().getLongitude());
+                    }
+
+                    boolean hasPending = approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
                             .stream().anyMatch(p -> p.getCarId().equals(car.getId()));
 
                     return new CarResponseDTO(
                             dto.id(), dto.manufacturer(), dto.model(), dto.year(), dto.color(),
-                            dto.price(), dto.mileage(), dto.status(), dto.isUsed(), hasPending
+                            dto.price(), dto.mileage(), dto.status(), dto.sellerLocation(), dto.isUsed(), hasPending,
+                            car.getOwner() != null ? car.getOwner().getLatitude() : null,
+                            car.getOwner() != null ? car.getOwner().getLongitude() : null,
+                            distance
                     );
-                })
-                .toList();
+                }).toList();
     }
 
     @Transactional
     public String listForSale(String username, Long carId) {
-        Car car = carRepository.findById(carId).orElseThrow(() -> new RuntimeException("Car cannot found!"));
-        if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("You do not have permission for this!");
-        }
+        Car car = carRepository.findById(carId).orElseThrow();
+        if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) throw new RuntimeException("Unauthorized!");
         car.setStatus("ON_SALE");
         carRepository.save(car);
-        return "Car is on sale!";
+        return "Car listed for sale.";
     }
 
     @Transactional
     public String cancelSale(String username, Long carId) {
-        Car car = carRepository.findById(carId).orElseThrow(() -> new RuntimeException("Car cannot found!"));
-        if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("You do not have permission for this!");
-        }
+        Car car = carRepository.findById(carId).orElseThrow();
+        if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) throw new RuntimeException("Unauthorized!");
         car.setStatus("OWNED");
         carRepository.save(car);
-        return "Sale is cancelled";
+        return "Sale cancelled.";
     }
 
     public List<TransactionDTO> getSoldHistory(String username) {
-        List<Transaction> transactions = transactionRepository.findAllBySellerNameIgnoreCaseOrderBySaleDateDesc(username);
-        return transactions.stream()
-                .map(transactionMapper::toDto)
-                .toList();
+        return transactionRepository.findAllBySellerNameIgnoreCaseOrderBySaleDateDesc(username)
+                .stream().map(transactionMapper::toDto).toList();
     }
 
-    public List<UpdateCarRequestDTO> getAllPendingApprovals() {
-        return approvalRepository.findByStatus(ApprovalStatus.PENDING)
-                .stream()
-                .map(approval -> {
-                    Car car = carRepository.findById(approval.getCarId()).orElse(null);
-                    return approvalMapper.toDto(approval, car);
-                })
-                .toList();
-    }
-
-    @Transactional
-    public String approveCarUpdate(Long approvalId) {
-        CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                .orElseThrow(() -> new RuntimeException("Request cannot found!"));
-
-        Car car = carRepository.findById(approval.getCarId())
-                .orElseThrow(() -> new RuntimeException("Car cannot found!"));
-
-        boolean isOwnerChanged = (car.getOwner() == null) || !car.getOwner().getUsername().equals(approval.getUsername());
-
-        if (isOwnerChanged) {
-            approvalRepository.delete(approval);
-            return "OWNER_CHANGED";
-        }
-
-        if (approval.getNewPrice() != null) car.setPrice(approval.getNewPrice());
-        if (approval.getNewColor() != null) car.setColor(approval.getNewColor());
-        if (approval.getNewMileage() != null) car.setMileage(approval.getNewMileage());
-
-        carRepository.save(car);
-        approvalRepository.delete(approval);
-
-        return "SUCCESS";
-    }
-
-    @Transactional
-    public String rejectCarUpdate(Long approvalId) {
-        CarUpdateApproval approval = approvalRepository.findById(approvalId)
-                .orElseThrow(() -> new RuntimeException("Request cannot found!"));
-        approvalRepository.delete(approval);
-        return "Rejected.";
-    }
-
-    public List<UpdateCarRequestDTO> getMyPendingRequests(String username) {
-        return approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
-                .stream()
-                .map(approval -> {
-                    Car car = carRepository.findById(approval.getCarId()).orElse(null);
-                    return approvalMapper.toDto(approval, car);
-                })
-                .toList();
+    private double calculateHaversine(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

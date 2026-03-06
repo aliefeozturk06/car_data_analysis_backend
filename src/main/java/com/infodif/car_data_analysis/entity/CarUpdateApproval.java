@@ -27,18 +27,27 @@ public class CarUpdateApproval {
     private String newColor;
     private Integer newMileage;
 
+    private Double oldPrice;
+    private String oldColor;
+    private Integer oldMileage;
+
     @Enumerated(EnumType.STRING)
     private ApprovalStatus status;
 
     private LocalDateTime requestDate;
 
     public CarUpdateApproval(Long carId, String username, User requestedBy,
-                             Double newPrice, String newColor, Integer newMileage) {
+                             Double oldPrice, Double newPrice,
+                             String oldColor, String newColor,
+                             Integer oldMileage, Integer newMileage) {
         this.carId = carId;
         this.username = username;
         this.requestedBy = requestedBy;
+        this.oldPrice = oldPrice;
         this.newPrice = newPrice;
+        this.oldColor = oldColor;
         this.newColor = newColor;
+        this.oldMileage = oldMileage;
         this.newMileage = newMileage;
         this.status = ApprovalStatus.PENDING;
         this.requestDate = LocalDateTime.now();

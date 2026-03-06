@@ -1,9 +1,7 @@
 package com.infodif.car_data_analysis.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,6 +32,15 @@ public class User implements UserDetails {
 
     @Column(precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
+
+    @Column(name = "location")
+    private String location;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Car> garage;
@@ -76,6 +83,9 @@ public class User implements UserDetails {
                 ", username='" + username + '\'' +
                 ", role=" + role +
                 ", balance=" + balance +
+                ", location='" + location + '\'' +
+                ", lat='" + latitude + '\'' +
+                ", lng='" + longitude + '\'' +
                 '}';
     }
 

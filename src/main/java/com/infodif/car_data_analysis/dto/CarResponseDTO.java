@@ -9,6 +9,10 @@ public record CarResponseDTO(
         Double price,
         Integer mileage,
         String status,
+        String sellerLocation,
         boolean isUsed,
-        boolean hasPendingUpdate
+        boolean hasPendingUpdate,
+        Double latitude,
+        Double longitude,
+        Double distance
 ) {}
