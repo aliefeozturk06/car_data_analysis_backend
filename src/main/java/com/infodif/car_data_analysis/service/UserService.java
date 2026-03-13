@@ -1,7 +1,7 @@
 package com.infodif.car_data_analysis.service;
 
 import com.infodif.car_data_analysis.client.NominatimClient;
-import com.infodif.car_data_analysis.client.TurkiyeApiClient; // 🔥 Yeni eklendi
+import com.infodif.car_data_analysis.client.TurkiyeApiClient;
 import com.infodif.car_data_analysis.dto.UserDTO;
 import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.mapper.UserMapper;
@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile; // 🔥 Yeni
 import tools.jackson.databind.JsonNode;
 
+import java.io.IOException; // 🔥 Yeni
 import java.math.BigDecimal;
 
 @Service
@@ -90,5 +92,42 @@ public class UserService {
             log.error("Geocoding failed for {}: {}", newLocation, e.getMessage());
         }
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void updateProfilePicture(String username, MultipartFile file) {
+        log.info("Uploading profile picture for user: {}", username);
+
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty! Please select a valid image.");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.startsWith("image/"))) {
+            throw new RuntimeException("Only image files are allowed!");
+        }
+
+        try {
+            User user = getUserByUsername(username);
+            user.setProfilePicture(file.getBytes());
+            userRepository.save(user);
+            log.info("Profile picture saved successfully for user: {}", username);
+        } catch (IOException e) {
+            log.error("Failed to store profile picture for user {}: {}", username, e.getMessage());
+            throw new RuntimeException("Error occurred while processing the image file.");
+        }
+    }
+
+    public byte[] getProfilePicture(String username) {
+        User user = getUserByUsername(username);
+        return user.getProfilePicture();
+    }
+
+    @Transactional
+    public void deleteProfilePicture(String username) {
+        User user = getUserByUsername(username);
+        user.setProfilePicture(null);
+        userRepository.save(user);
+        log.info("Profile picture deleted for user: {}", username);
     }
 }

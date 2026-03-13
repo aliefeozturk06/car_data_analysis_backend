@@ -42,6 +42,10 @@ public class User implements UserDetails {
     @Column(name = "longitude")
     private Double longitude;
 
+    @Column(name = "profile_picture")
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.BINARY)
+    private byte[] profilePicture;
+
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Car> garage;
 
@@ -86,6 +90,7 @@ public class User implements UserDetails {
                 ", location='" + location + '\'' +
                 ", lat='" + latitude + '\'' +
                 ", lng='" + longitude + '\'' +
+                ", hasProfilePicture=" + (profilePicture != null) +
                 '}';
     }
 

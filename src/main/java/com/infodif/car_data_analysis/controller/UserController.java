@@ -4,7 +4,10 @@ import com.infodif.car_data_analysis.dto.UserDTO;
 import com.infodif.car_data_analysis.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 
@@ -45,5 +48,37 @@ public class UserController {
         log.info("Updating location for user: {} to {}", username, newLocation);
         userService.updateLocation(username, newLocation);
         return "Location updated successfully.";
+    }
+
+    @PostMapping("/{username}/upload-profile-picture")
+    public ResponseEntity<String> uploadProfilePicture(
+            @PathVariable String username,
+            @RequestParam("file") MultipartFile file) {
+
+        log.info("Profile picture upload request for user: {}", username);
+        userService.updateProfilePicture(username, file);
+        return ResponseEntity.ok("Profile picture uploaded successfully!");
+    }
+
+    @GetMapping("/{username}/profile-picture")
+    public ResponseEntity<byte[]> getProfilePicture(@PathVariable String username) {
+        log.info("Fetching profile picture for user: {}", username);
+        byte[] image = userService.getProfilePicture(username);
+
+        if (image == null || image.length == 0) {
+            log.warn("No profile picture found for user: {}", username);
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(image);
+    }
+
+    @DeleteMapping("/{username}/profile-picture")
+    public ResponseEntity<String> deleteProfilePicture(@PathVariable String username) {
+        log.info("Deleting profile picture for user: {}", username);
+        userService.deleteProfilePicture(username);
+        return ResponseEntity.ok("Profile picture deleted successfully.");
     }
 }
