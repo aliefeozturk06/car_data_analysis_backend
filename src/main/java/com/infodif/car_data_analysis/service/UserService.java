@@ -10,10 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile; // 🔥 Yeni
+import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.JsonNode;
-
-import java.io.IOException; // 🔥 Yeni
+import java.io.IOException;
 import java.math.BigDecimal;
 
 @Service

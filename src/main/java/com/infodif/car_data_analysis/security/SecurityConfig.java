@@ -38,14 +38,15 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/ws-chat/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
                         .requestMatchers("/api/approvals/**").hasAnyRole("ADMIN", "MODERATOR")
-
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

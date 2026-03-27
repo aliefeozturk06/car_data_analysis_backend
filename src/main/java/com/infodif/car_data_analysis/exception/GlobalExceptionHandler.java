@@ -3,9 +3,9 @@ package com.infodif.car_data_analysis.exception;
 import com.infodif.car_data_analysis.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
@@ -16,42 +16,58 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException e) {
-        return buildResponse(HttpStatus.NOT_FOUND, e.getMessage());
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleResourceNotFound(ResourceNotFoundException e) {
+        return new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                e.getMessage(),
+                LocalDateTime.now()
+        );
     }
 
     @ExceptionHandler(InsufficientBalanceException.class)
-    public ResponseEntity<ErrorResponse> handleInsufficientBalance(InsufficientBalanceException e) {
-        return buildResponse(HttpStatus.PAYMENT_REQUIRED, e.getMessage());
+    @ResponseStatus(HttpStatus.PAYMENT_REQUIRED)
+    public ErrorResponse handleInsufficientBalance(InsufficientBalanceException e) {
+        return new ErrorResponse(
+                HttpStatus.PAYMENT_REQUIRED.value(),
+                e.getMessage(),
+                LocalDateTime.now()
+        );
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException e) {
-        return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleRuntimeException(RuntimeException e) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                e.getMessage(),
+                LocalDateTime.now()
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleValidationException(MethodArgumentNotValidException e) {
         String details = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
         log.error("⚠️ Validation Error: {}", details);
-        return buildResponse(HttpStatus.BAD_REQUEST, "Validation failed: " + details);
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation failed: " + details,
+                LocalDateTime.now()
+        );
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneralException(Exception e) {
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleGeneralException(Exception e) {
         log.error("🚨 Critical System Error: ", e);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected system error occurred.");
-    }
-
-    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
-        ErrorResponse error = new ErrorResponse(
-                status.value(),
-                message,
+        return new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "An unexpected system error occurred.",
                 LocalDateTime.now()
         );
-        return new ResponseEntity<>(error, status);
     }
 }

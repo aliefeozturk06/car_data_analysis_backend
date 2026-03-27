@@ -137,7 +137,7 @@ public class CarService {
 
         Car car = carMapper.toEntity(dto);
         car.setOwner(owner);
-        car.setStatus("OWNED"); // Initial status after creation
+        car.setStatus("OWNED");
 
         log.info("Car created for user: {}", username);
         return carMapper.toResponseDto(carRepository.save(car));
