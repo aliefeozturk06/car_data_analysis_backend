@@ -6,6 +6,7 @@ import com.infodif.car_data_analysis.mapper.CarUpdateApprovalMapper;
 import com.infodif.car_data_analysis.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,7 @@ public class CarUpdateApprovalService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", allEntries = true)
     public void approveUpdate(Long approvalId) {
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new RuntimeException("Request not found!"));
@@ -67,6 +69,7 @@ public class CarUpdateApprovalService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", allEntries = true)
     public void rejectUpdate(Long approvalId) {
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new RuntimeException("Request not found!"));

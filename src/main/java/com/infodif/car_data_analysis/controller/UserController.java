@@ -1,6 +1,10 @@
 package com.infodif.car_data_analysis.controller;
 
+import com.infodif.car_data_analysis.dto.AuthResponseDTO;
 import com.infodif.car_data_analysis.dto.UserDTO;
+import com.infodif.car_data_analysis.entity.User;
+import com.infodif.car_data_analysis.mapper.UserMapper;
+import com.infodif.car_data_analysis.security.JwtUtil;
 import com.infodif.car_data_analysis.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +24,8 @@ import java.math.BigDecimal;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("/{username}")
     public UserDTO getUserProfile(@PathVariable String username) {
@@ -44,10 +50,13 @@ public class UserController {
     }
 
     @PutMapping("/update-username")
-    public String updateUsername(@RequestParam String newUsername, Authentication auth) {
+    public AuthResponseDTO updateUsername(@RequestParam String newUsername, Authentication auth) {
         String currentUsername = auth.getName();
-        userService.updateUsername(currentUsername, newUsername);
-        return "Username updated successfully.";
+        User updatedUser = userService.updateUsername(currentUsername, newUsername);
+        // Username is the JWT subject, so the old token is dead the moment it changes.
+        // Issue a fresh token now so the caller doesn't get silently logged out.
+        String newToken = jwtUtil.generateToken(updatedUser);
+        return userMapper.toAuthResponseDto(updatedUser, newToken);
     }
 
     @PutMapping("/update-location")

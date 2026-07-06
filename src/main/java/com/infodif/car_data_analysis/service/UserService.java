@@ -55,14 +55,14 @@ public class UserService {
     }
 
     @Transactional
-    public void updateUsername(String currentUsername, String newUsername) {
+    public User updateUsername(String currentUsername, String newUsername) {
         if (userRepository.findByUsername(newUsername).isPresent()) {
             throw new RuntimeException("This username is already taken!");
         }
 
         User user = getUserByUsername(currentUsername);
         user.setUsername(newUsername);
-        userRepository.save(user);
+        return userRepository.save(user);
     }
 
     @Transactional

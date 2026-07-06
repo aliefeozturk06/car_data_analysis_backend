@@ -38,6 +38,9 @@ public class Car {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @Version
+    private Long version;
+
     @Override
     public String toString() {
         return "Car{" +

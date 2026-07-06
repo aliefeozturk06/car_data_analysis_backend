@@ -9,6 +9,7 @@ import com.infodif.car_data_analysis.repository.*;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class PurchaseService {
     private final TransactionMapper transactionMapper;
 
     @Transactional
+    @CacheEvict(value = "cars", key = "#carId")
     public String buyCar(String username, Long carId) {
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new RuntimeException("Car not found!"));
@@ -84,6 +86,7 @@ public class PurchaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", key = "#dto.carId()")
     public String createUpdateRequest(UpdateCarRequestDTO dto) {
         if (dto.newPrice() == null && dto.newColor() == null && dto.newMileage() == null) {
             throw new RuntimeException("Price, color or mileage should be filled!");
@@ -129,6 +132,7 @@ public class PurchaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", allEntries = true)
     public String approveCarUpdate(Long approvalId) {
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new RuntimeException("Request not found!"));
@@ -157,6 +161,7 @@ public class PurchaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", allEntries = true)
     public String rejectCarUpdate(Long approvalId) {
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new RuntimeException("Request not found!"));
@@ -277,6 +282,7 @@ public class PurchaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", key = "#carId")
     public String listForSale(String username, Long carId) {
         Car car = carRepository.findById(carId).orElseThrow();
         if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) throw new RuntimeException("Unauthorized!");
@@ -286,6 +292,7 @@ public class PurchaseService {
     }
 
     @Transactional
+    @CacheEvict(value = "cars", key = "#carId")
     public String cancelSale(String username, Long carId) {
         Car car = carRepository.findById(carId).orElseThrow();
         if (car.getOwner() == null || !car.getOwner().getUsername().equals(username)) throw new RuntimeException("Unauthorized!");

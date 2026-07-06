@@ -3,6 +3,7 @@ package com.infodif.car_data_analysis.exception;
 import com.infodif.car_data_analysis.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -31,6 +32,17 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(
                 HttpStatus.PAYMENT_REQUIRED.value(),
                 e.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
+        log.warn("⚠️ Optimistic lock conflict: {}", e.getMessage());
+        return new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "This car was just modified by someone else. Please refresh and try again.",
                 LocalDateTime.now()
         );
     }
