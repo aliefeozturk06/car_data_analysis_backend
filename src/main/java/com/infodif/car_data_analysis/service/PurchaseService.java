@@ -222,6 +222,7 @@ public class PurchaseService {
         return "Approval request deleted.";
     }
 
+    @Transactional(readOnly = true)
     public List<CarResponseDTO> getMyCars(String username, String status, CarFilterDTO filter) {
         User viewer = userRepository.findByUsername(username).orElse(null);
         Double vLat = (viewer != null) ? viewer.getLatitude() : null;
