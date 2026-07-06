@@ -3,7 +3,7 @@ package com.infodif.car_data_analysis.controller;
 import com.infodif.car_data_analysis.dto.UpdateCarRequestDTO;
 import com.infodif.car_data_analysis.service.CarUpdateApprovalService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,9 +20,9 @@ public class CarUpdateApprovalController {
         return approvalService.getAllPendingRequests();
     }
 
-    @GetMapping("/my-history/{username}")
-    public List<UpdateCarRequestDTO> getMyHistory(@PathVariable String username) {
-        return approvalService.getUserRequestHistory(username);
+    @GetMapping("/my-history")
+    public List<UpdateCarRequestDTO> getMyHistory(Authentication auth) {
+        return approvalService.getUserRequestHistory(auth.getName());
     }
 
     @PostMapping("/approve/{id}")

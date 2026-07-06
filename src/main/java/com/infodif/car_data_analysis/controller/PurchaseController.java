@@ -21,7 +21,8 @@ public class PurchaseController {
     private final PurchaseService purchaseService;
 
     @PostMapping("/buy")
-    public String buyCar(@RequestParam String username, @RequestParam Long carId) {
+    public String buyCar(@RequestParam Long carId, Authentication auth) {
+        String username = auth.getName();
         log.info("User {} is attempting to purchase car with ID: {}", username, carId);
         return purchaseService.buyCar(username, carId);
     }
@@ -51,46 +52,53 @@ public class PurchaseController {
     }
 
     @PostMapping("/cancel-update-request")
-    public String cancelUpdateRequest(@RequestParam String username, @RequestParam Long carId) {
+    public String cancelUpdateRequest(@RequestParam Long carId, Authentication auth) {
+        String username = auth.getName();
         log.info("Cancelling update request for car ID: {} by user: {}", carId, username);
         return purchaseService.cancelUpdateRequest(username, carId);
     }
 
     @GetMapping("/my-cars")
     public List<CarResponseDTO> getMyCars(
-            @RequestParam String username,
             @RequestParam String status,
-            @ModelAttribute CarFilterDTO filter) {
+            @ModelAttribute CarFilterDTO filter,
+            Authentication auth) {
+        String username = auth.getName();
         log.info("User {} is viewing their own cars. Distance will be calculated based on this user.", username);
         return purchaseService.getMyCars(username, status, filter);
     }
 
     @GetMapping("/sold-history")
-    public List<TransactionDTO> getSoldHistory(@RequestParam String username) {
+    public List<TransactionDTO> getSoldHistory(Authentication auth) {
+        String username = auth.getName();
         log.info("Fetching sales history for user: {}", username);
         return purchaseService.getSoldHistory(username);
     }
 
     @GetMapping("/my-pending-requests")
-    public List<UpdateCarRequestDTO> getMyPendingRequests(@RequestParam String username) {
+    public List<UpdateCarRequestDTO> getMyPendingRequests(Authentication auth) {
+        String username = auth.getName();
         log.info("Fetching pending update requests for user: {}", username);
         return purchaseService.getMyPendingRequests(username);
     }
 
     @GetMapping("/my-update-history")
-    public List<UpdateCarRequestDTO> getMyUpdateHistory(@RequestParam String username) {
+    public List<UpdateCarRequestDTO> getMyUpdateHistory(Authentication auth) {
+        String username = auth.getName();
         log.info("Fetching full update history for user: {}", username);
         return purchaseService.getMyUpdateHistory(username);
     }
 
     @PutMapping("/list-for-sale")
-    public String listForSale(@RequestParam String username, @RequestParam Long carId) {
+    public String listForSale(@RequestParam Long carId, Authentication auth) {
+        String username = auth.getName();
         log.info("User {} is listing car ID: {} for sale", username, carId);
         return purchaseService.listForSale(username, carId);
     }
 
     @PutMapping("/cancel-sale")
-    public String cancelSale(@RequestParam String username, @RequestParam Long carId) {
+    public String cancelSale(@RequestParam Long carId, Authentication auth) {
+        String username = auth.getName();
         log.info("User {} is cancelling sale for car ID: {}", username, carId);
         return purchaseService.cancelSale(username, carId);
     }

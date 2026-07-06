@@ -17,6 +17,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -145,6 +147,7 @@ public class PurchaseService {
         if (approval.getNewColor() != null) car.setColor(approval.getNewColor());
         if (approval.getNewMileage() != null) car.setMileage(approval.getNewMileage());
 
+        car.setStatus("OWNED");
         carRepository.save(car);
 
         approval.setStatus(ApprovalStatus.APPROVED);
@@ -157,6 +160,12 @@ public class PurchaseService {
     public String rejectCarUpdate(Long approvalId) {
         CarUpdateApproval approval = approvalRepository.findById(approvalId)
                 .orElseThrow(() -> new RuntimeException("Request not found!"));
+
+        Car car = carRepository.findById(approval.getCarId()).orElse(null);
+        if (car != null && "APPROVAL_WAITING".equals(car.getStatus())) {
+            car.setStatus("OWNED");
+            carRepository.save(car);
+        }
 
         approval.setStatus(ApprovalStatus.REJECTED);
         approvalRepository.save(approval);
@@ -238,7 +247,14 @@ public class PurchaseService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return carRepository.findAll(spec).stream()
+        List<Car> cars = carRepository.findAll(spec);
+
+        Set<Long> pendingCarIds = approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
+                .stream()
+                .map(CarUpdateApproval::getCarId)
+                .collect(Collectors.toSet());
+
+        return cars.stream()
                 .map(car -> {
                     CarResponseDTO dto = carMapper.toResponseDto(car);
 
@@ -248,8 +264,7 @@ public class PurchaseService {
                         distance = calculateHaversine(vLat, vLng, car.getOwner().getLatitude(), car.getOwner().getLongitude());
                     }
 
-                    boolean hasPending = approvalRepository.findByUsernameAndStatus(username, ApprovalStatus.PENDING)
-                            .stream().anyMatch(p -> p.getCarId().equals(car.getId()));
+                    boolean hasPending = pendingCarIds.contains(car.getId());
 
                     return new CarResponseDTO(
                             dto.id(), dto.manufacturer(), dto.model(), dto.year(), dto.color(),

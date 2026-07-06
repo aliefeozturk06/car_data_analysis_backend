@@ -1,6 +1,5 @@
 package com.infodif.car_data_analysis.dto;
 
-import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -14,7 +13,6 @@ public record CarRequestDTO(
 
         @NotNull(message = "Year is mandatory")
         @Min(value = 1950, message = "Production year cannot be earlier than 1950.")
-        @Max(value = 2026, message = "Production year cannot be later than 2026.")
         Integer year,
 
         @NotBlank(message = "Color is mandatory.")

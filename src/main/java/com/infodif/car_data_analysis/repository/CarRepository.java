@@ -1,12 +1,16 @@
 package com.infodif.car_data_analysis.repository;
 
 import com.infodif.car_data_analysis.entity.Car;
-import com.infodif.car_data_analysis.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 
 @Repository
 public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
-    long countByOwnerAndStatus(User owner, String status);}
+
+    @Query("SELECT c.owner.username, c.status, COUNT(c) FROM Car c WHERE c.owner IS NOT NULL GROUP BY c.owner.username, c.status")
+    List<Object[]> countCarsGroupedByOwnerAndStatus();
+}

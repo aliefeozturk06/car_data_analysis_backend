@@ -3,8 +3,6 @@ package com.infodif.car_data_analysis.service;
 import com.infodif.car_data_analysis.dto.UserAdminResponseDTO;
 import com.infodif.car_data_analysis.dto.UserCarStatsDTO;
 import com.infodif.car_data_analysis.dto.UserRoleUpdateDTO;
-import com.infodif.car_data_analysis.entity.ApprovalStatus;
-import com.infodif.car_data_analysis.entity.CarUpdateApproval;
 import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.exception.ResourceNotFoundException;
 import com.infodif.car_data_analysis.repository.CarRepository;
@@ -15,8 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -42,17 +41,37 @@ public class AdminService {
 
     public List<UserCarStatsDTO> getUserCarStats() {
         List<User> users = userRepository.findAll();
-        List<UserCarStatsDTO> statsList = new ArrayList<>();
 
-        for (User user : users) {
-            long owned = carRepository.countByOwnerAndStatus(user, "OWNED");
-            long onSale = carRepository.countByOwnerAndStatus(user, "ON_SALE");
+        Map<String, Long> ownedCounts = new HashMap<>();
+        Map<String, Long> onSaleCounts = new HashMap<>();
 
-            long waiting = carUpdateApprovalRepository.countByUsernameAndStatus(user.getUsername(), ApprovalStatus.PENDING);
+        for (Object[] row : carRepository.countCarsGroupedByOwnerAndStatus()) {
+            String username = (String) row[0];
+            String status = (String) row[1];
+            Long count = (Long) row[2];
 
-            statsList.add(new UserCarStatsDTO(user.getUsername(), owned, onSale, waiting));
+            if ("OWNED".equals(status)) {
+                ownedCounts.put(username, count);
+            } else if ("ON_SALE".equals(status)) {
+                onSaleCounts.put(username, count);
+            }
         }
-        return statsList;
+
+        Map<String, Long> waitingCounts = new HashMap<>();
+        for (Object[] row : carUpdateApprovalRepository.countPendingGroupedByUsername()) {
+            String username = (String) row[0];
+            Long count = (Long) row[1];
+            waitingCounts.put(username, count);
+        }
+
+        return users.stream()
+                .map(user -> new UserCarStatsDTO(
+                        user.getUsername(),
+                        ownedCounts.getOrDefault(user.getUsername(), 0L),
+                        onSaleCounts.getOrDefault(user.getUsername(), 0L),
+                        waitingCounts.getOrDefault(user.getUsername(), 0L)
+                ))
+                .toList();
     }
 
     @Transactional

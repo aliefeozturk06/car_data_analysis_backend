@@ -2,10 +2,12 @@ package com.infodif.car_data_analysis.service;
 
 import com.infodif.car_data_analysis.dto.*;
 import com.infodif.car_data_analysis.entity.Car;
+import com.infodif.car_data_analysis.entity.CarUpdateApproval;
 import com.infodif.car_data_analysis.entity.User;
 import com.infodif.car_data_analysis.exception.ResourceNotFoundException;
 import com.infodif.car_data_analysis.mapper.CarMapper;
 import com.infodif.car_data_analysis.repository.CarRepository;
+import com.infodif.car_data_analysis.repository.CarUpdateApprovalRepository;
 import com.infodif.car_data_analysis.repository.UserRepository;
 import com.infodif.car_data_analysis.specification.CarSpecifications;
 import jakarta.persistence.criteria.JoinType;
@@ -19,10 +21,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -36,6 +40,7 @@ public class CarService {
     private final CarRepository carRepository;
     private final UserRepository userRepository;
     private final CarMapper carMapper;
+    private final CarUpdateApprovalRepository approvalRepository;
 
     public CarListResponseDTO getAllCars(CarFilterDTO filter, String ownerUsername, String viewerUsername) {
         User viewer = (viewerUsername != null) ? userRepository.findByUsername(viewerUsername).orElse(null) : null;
@@ -71,6 +76,7 @@ public class CarService {
             spec = spec.and((root, query, cb) ->
                     cb.equal(root.join("owner", JoinType.LEFT).get("username"), ownerUsername)
             );
+            spec = spec.and(CarSpecifications.hasStatus(filter.status()));
         } else {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), "ON_SALE"));
         }
@@ -135,6 +141,12 @@ public class CarService {
         User owner = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found!"));
 
+        int maxAllowedYear = Year.now().getValue() + 1;
+        if (dto.year() != null && dto.year() > maxAllowedYear) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Production year cannot be later than " + maxAllowedYear + ".");
+        }
+
         Car car = carMapper.toEntity(dto);
         car.setOwner(owner);
         car.setStatus("OWNED");
@@ -145,43 +157,96 @@ public class CarService {
 
     @Transactional
     @CacheEvict(value = "cars", key = "#id")
-    public CarResponseDTO updateCar(Long id, CarRequestDTO dto) {
-        Car car = carRepository.findById(id).orElseThrow(() -> new RuntimeException("Car not found!"));
-        carMapper.updateEntityFromDto(dto, car);
-        handleStatusAfterUpdate(car);
-        return carMapper.toResponseDto(carRepository.save(car));
-    }
+    public CarResponseDTO updateCar(Long id, CarRequestDTO dto, Authentication auth) {
+        Car car = carRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Car not found!"));
 
-    @Transactional
-    @CacheEvict(value = "cars", key = "#id")
-    public CarResponseDTO patchCar(Long id, CarUpdateDTO updateDto) {
-        Car car = carRepository.findById(id).orElseThrow(() -> new RuntimeException("Car not found!"));
-        if (!"OWNED".equals(car.getStatus()) && !"ON_SALE".equals(car.getStatus())) {
-            throw new RuntimeException("Only owned or for-sale cars can be patched!");
+        boolean isVip = isVip(auth);
+        checkOwnership(car, auth, isVip);
+
+        if (isVip) {
+            carMapper.updateEntityFromDto(dto, car);
+            log.info("VIP user update: Auto-approving changes for Car ID {}", car.getId());
+            return carMapper.toResponseDto(carRepository.save(car));
         }
-        carMapper.patchEntityFromDto(updateDto, car);
-        handleStatusAfterUpdate(car);
-        return carMapper.toResponseDto(carRepository.save(car));
+
+        createApprovalRequest(car, auth.getName(), dto.price(), dto.color(), dto.mileage());
+        car.setStatus("APPROVAL_WAITING");
+        carRepository.save(car);
+        log.info("Standard user update: Car ID {} sent to approval queue.", car.getId());
+
+        return carMapper.toResponseDto(car);
     }
 
     @Transactional
     @CacheEvict(value = "cars", key = "#id")
-    public void deleteCar(Long id) {
-        if (!carRepository.existsById(id)) throw new RuntimeException("Car not found!");
+    public CarResponseDTO patchCar(Long id, CarUpdateDTO updateDto, Authentication auth) {
+        Car car = carRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Car not found!"));
+
+        if (!"OWNED".equals(car.getStatus()) && !"ON_SALE".equals(car.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only owned or for-sale cars can be patched!");
+        }
+
+        boolean isVip = isVip(auth);
+        checkOwnership(car, auth, isVip);
+
+        if (isVip) {
+            carMapper.patchEntityFromDto(updateDto, car);
+            log.info("VIP user update: Auto-approving changes for Car ID {}", car.getId());
+            return carMapper.toResponseDto(carRepository.save(car));
+        }
+
+        createApprovalRequest(car, auth.getName(), updateDto.price(), updateDto.color(), updateDto.mileage());
+        car.setStatus("APPROVAL_WAITING");
+        carRepository.save(car);
+        log.info("Standard user update: Car ID {} sent to approval queue.", car.getId());
+
+        return carMapper.toResponseDto(car);
+    }
+
+    @Transactional
+    @CacheEvict(value = "cars", key = "#id")
+    public void deleteCar(Long id, Authentication auth) {
+        Car car = carRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Car not found!"));
+
+        checkOwnership(car, auth, isVip(auth));
         carRepository.deleteById(id);
     }
 
-    private void handleStatusAfterUpdate(Car car) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isVip = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MODERATOR"));
-
-        if (isVip) {
-            log.info("VIP user update: Auto-approving changes for Car ID {}", car.getId());
-        } else {
-            car.setStatus("APPROVAL_WAITING");
-            log.info("Standard user update: Car ID {} sent to approval queue.", car.getId());
+    private void checkOwnership(Car car, Authentication auth, boolean isVip) {
+        if (isVip) return;
+        if (auth == null || car.getOwner() == null || !car.getOwner().getUsername().equals(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to modify this car!");
         }
+    }
+
+    private boolean isVip(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().contains("ADMIN") || a.getAuthority().contains("MODERATOR"));
+    }
+
+    private void createApprovalRequest(Car car, String username, Double newPrice, String newColor, Integer newMileage) {
+        User requester = userRepository.findByUsername(username).orElse(null);
+
+        boolean alreadyPending = approvalRepository.findByUsernameAndStatus(username, com.infodif.car_data_analysis.entity.ApprovalStatus.PENDING)
+                .stream().anyMatch(req -> req.getCarId().equals(car.getId()));
+
+        if (alreadyPending) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "There is already a pending approval request for this car!");
+        }
+
+        CarUpdateApproval approval = new CarUpdateApproval(
+                car.getId(),
+                username,
+                requester,
+                car.getPrice(),
+                newPrice,
+                car.getColor(),
+                newColor,
+                car.getMileage(),
+                newMileage
+        );
+        approvalRepository.save(approval);
     }
 
     private double calculateHaversine(double lat1, double lon1, double lat2, double lon2) {

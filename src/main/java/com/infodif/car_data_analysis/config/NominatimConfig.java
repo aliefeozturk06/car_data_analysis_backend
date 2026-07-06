@@ -12,7 +12,11 @@ public class NominatimConfig {
 
     @Bean
     public NominatimClient nominatimClient() {
-        RestClient restClient = RestClient.create("https://nominatim.openstreetmap.org");
+        RestClient restClient = RestClient.builder()
+                .baseUrl("https://nominatim.openstreetmap.org")
+                .defaultHeader("User-Agent", "car-data-analysis-app/1.0 (contact: admin@infodif.com)")
+                .build();
+
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
         return factory.createClient(NominatimClient.class);

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,35 +28,42 @@ public class UserController {
     }
 
     @GetMapping("/{username}/balance")
-    public BigDecimal getBalance(@PathVariable String username) {
+    public BigDecimal getBalance(@PathVariable String username, Authentication auth) {
+        if (!auth.getName().equals(username)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only view your own balance.");
+        }
         log.info("Fetching account balance for user: {}", username);
         return userService.getBalance(username);
     }
 
     @PutMapping("/add-balance")
-    public BigDecimal addBalance(@RequestParam String username, @RequestParam BigDecimal amount) {
+    public BigDecimal addBalance(@RequestParam BigDecimal amount, Authentication auth) {
+        String username = auth.getName();
         log.info("Processing balance deposit of {} for user: {}", amount, username);
         return userService.addBalance(username, amount);
     }
 
     @PutMapping("/update-username")
-    public String updateUsername(@RequestParam String currentUsername, @RequestParam String newUsername) {
+    public String updateUsername(@RequestParam String newUsername, Authentication auth) {
+        String currentUsername = auth.getName();
         userService.updateUsername(currentUsername, newUsername);
         return "Username updated successfully.";
     }
 
     @PutMapping("/update-location")
-    public String updateLocation(@RequestParam String username, @RequestParam String newLocation) {
+    public String updateLocation(@RequestParam String newLocation, Authentication auth) {
+        String username = auth.getName();
         log.info("Updating location for user: {} to {}", username, newLocation);
         userService.updateLocation(username, newLocation);
         return "Location updated successfully.";
     }
 
-    @PostMapping("/{username}/upload-profile-picture")
+    // DÜZELTME: path'teki username yerine token'daki kullanıcı kullanılıyor.
+    @PostMapping("/upload-profile-picture")
     public String uploadProfilePicture(
-            @PathVariable String username,
-            @RequestParam("file") MultipartFile file) {
-
+            @RequestParam("file") MultipartFile file,
+            Authentication auth) {
+        String username = auth.getName();
         log.info("Profile picture upload request for user: {}", username);
         userService.updateProfilePicture(username, file);
         return "Profile picture uploaded successfully!";
@@ -74,8 +82,9 @@ public class UserController {
         return image;
     }
 
-    @DeleteMapping("/{username}/profile-picture")
-    public String deleteProfilePicture(@PathVariable String username) {
+    @DeleteMapping("/profile-picture")
+    public String deleteProfilePicture(Authentication auth) {
+        String username = auth.getName();
         log.info("Deleting profile picture for user: {}", username);
         userService.deleteProfilePicture(username);
         return "Profile picture deleted successfully.";

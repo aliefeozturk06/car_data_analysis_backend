@@ -32,7 +32,6 @@ public class CarController {
     public CarListResponseDTO getMyCars(CarFilterDTO filterDto, Principal principal) {
         String currentUsername = principal.getName();
         log.info("🏠 My Cars requested by user: {}", currentUsername);
-
         return carService.getAllCars(filterDto, currentUsername, currentUsername);
     }
 
@@ -48,18 +47,18 @@ public class CarController {
     }
 
     @PutMapping("/{id}")
-    public CarResponseDTO updateCar(@PathVariable Long id, @RequestBody CarRequestDTO requestDto) {
-        return carService.updateCar(id, requestDto);
+    public CarResponseDTO updateCar(@PathVariable Long id, @RequestBody CarRequestDTO requestDto, Authentication auth) {
+        return carService.updateCar(id, requestDto, auth);
     }
 
     @PatchMapping("/{id}")
-    public CarResponseDTO patchCar(@PathVariable Long id, @RequestBody CarUpdateDTO updateDto) {
-        return carService.patchCar(id, updateDto);
+    public CarResponseDTO patchCar(@PathVariable Long id, @RequestBody CarUpdateDTO updateDto, Authentication auth) {
+        return carService.patchCar(id, updateDto, auth);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteCar(@PathVariable Long id) {
-        carService.deleteCar(id);
+    public void deleteCar(@PathVariable Long id, Authentication auth) {
+        carService.deleteCar(id, auth);
     }
 }
