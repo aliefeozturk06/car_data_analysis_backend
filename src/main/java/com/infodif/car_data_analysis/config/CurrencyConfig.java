@@ -12,7 +12,7 @@ public class CurrencyConfig {
 
     @Bean
     public CurrencyClient currencyClient() {
-        RestClient restClient = RestClient.create("https://api.frankfurter.app");
+        RestClient restClient = RestClient.create("https://api.frankfurter.dev/v1");
         RestClientAdapter adapter = RestClientAdapter.create(restClient);
         HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
         return factory.createClient(CurrencyClient.class);

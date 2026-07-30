@@ -5,7 +5,7 @@ import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
 import tools.jackson.databind.JsonNode;
 
-@HttpExchange("https://api.frankfurter.app")
+@HttpExchange("https://api.frankfurter.dev/v1")
 public interface CurrencyClient {
 
     @GetExchange("/latest")
